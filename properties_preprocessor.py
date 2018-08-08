@@ -342,6 +342,6 @@ property_data['roompersqft'] = property_data['roomcnt'] / property_data['calcula
 property_data['bedroompersqft'] = property_data['bedroomcnt'] / property_data['calculatedfinishedsquarefeet']
 
 print("Saving preprocessed data")
-property_data.to_csv('preprocessed/properties_2016_preprocessed.csv')
+property_data.to_csv('preprocessed/properties_2016.csv', index=False)
 
 print("Done")

@@ -4,18 +4,15 @@ import pandas as pd
 import lightgbm as lgb
 
 print("Loading data")
-merged_data = pd.read_csv("preprocessed/merged.csv")
+x_train = pd.read_csv("preprocessed/merged_2016.csv")
 
-x_train = merged_data
+y_train = x_train['logerror'].values
 x_train.drop("logerror", axis=1, inplace=True)
-y_train = merged_data['logerror'].values
-
-del merged_data; gc.collect()
 
 train_columns = x_train.columns
 
 for c in x_train.dtypes[x_train.dtypes == object].index.values:
-    x_train[c] = (x_train[c] == True)
+	x_train[c] = (x_train[c] == True)
 
 print("Splitting into training and validation")
 split = 90000
@@ -61,7 +58,7 @@ del d_train, d_valid; gc.collect()
 del x_train, x_valid; gc.collect()
 
 print("Loading and preparing test set")
-sample = pd.read_csv('sample_submission.csv')
+sample = pd.read_csv('data/sample_submission.csv')
 sample['parcelid'] = sample['ParcelId']
 df_test = sample.merge(property_data, on='parcelid', how='left')
 del sample; gc.collect()
@@ -69,14 +66,14 @@ del sample; gc.collect()
 x_test = df_test[train_columns]
 del df_test; gc.collect()
 for c in x_test.dtypes[x_test.dtypes == object].index.values:
-x_test[c] = (x_test[c] == True)
+	x_test[c] = (x_test[c] == True)
 x_test = x_test.values.astype(np.float32, copy=False)
 
 print("Predicting")
 # num_threads > 1 will predict very slow in kernal
 clf.reset_parameter({"num_threads":1})
 
-sub = pd.read_csv('sample_submission.csv')
+sub = pd.read_csv('data/sample_submission.csv')
 x_test["month"] = 10
 sub["201610"] = clf.predict(x_test)
 x_test["month"] = 11
