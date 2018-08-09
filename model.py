@@ -1,4 +1,5 @@
 ﻿import gc
+import datetime
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
@@ -7,9 +8,10 @@ print("Loading data")
 x_train = pd.read_csv("preprocessed/merged_2016.csv")
 
 y_train = x_train['logerror'].values
-x_train.drop("logerror", axis=1, inplace=True)
+x_train.drop(['logerror', 'propertyzoningdesc', 'propertycountylandusecode'], axis=1, inplace=True)
 
 train_columns = x_train.columns
+month_col_index = train_columns.get_loc("month")
 
 for c in x_train.dtypes[x_train.dtypes == object].index.values:
 	x_train[c] = (x_train[c] == True)
@@ -52,17 +54,20 @@ params['bagging_seed'] = 3
 """
 
 watchlist = [d_valid]
-clf = lgb.train(params, d_train, 500, watchlist)
+clf = lgb.train(params, d_train, 5, watchlist)
 
 del d_train, d_valid; gc.collect()
 del x_train, x_valid; gc.collect()
 
 print("Loading and preparing test set")
+property_data = pd.read_csv("preprocessed/properties_2016.csv")
 sample = pd.read_csv('data/sample_submission.csv')
 sample['parcelid'] = sample['ParcelId']
 df_test = sample.merge(property_data, on='parcelid', how='left')
+del property_data; gc.collect()
 del sample; gc.collect()
 
+df_test["month"] = 0
 x_test = df_test[train_columns]
 del df_test; gc.collect()
 for c in x_test.dtypes[x_test.dtypes == object].index.values:
@@ -74,12 +79,14 @@ print("Predicting")
 clf.reset_parameter({"num_threads":1})
 
 sub = pd.read_csv('data/sample_submission.csv')
-x_test["month"] = 10
+x_test[:,month_col_index] = 10
 sub["201610"] = clf.predict(x_test)
-x_test["month"] = 11
+x_test[:,month_col_index] = 11
 sub["201611"] = clf.predict(x_test)
-x_test["month"] = 12
+x_test[:,month_col_index] = 12
 sub["201612"] = clf.predict(x_test)
 
 print("Saving predictions")
 sub.to_csv('results/preds.csv', index=False, float_format='%.4f')
+
+print("Done")
