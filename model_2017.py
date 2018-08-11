@@ -5,7 +5,7 @@ import pandas as pd
 import lightgbm as lgb
 
 print("Loading data")
-x_train = pd.read_csv("preprocessed/merged_2016.csv")
+x_train = pd.read_csv("preprocessed/merged_2017.csv")
 
 y_train = x_train['logerror'].values
 x_train.drop(['logerror', 'propertyzoningdesc', 'propertycountylandusecode'], axis=1, inplace=True)
@@ -17,7 +17,7 @@ for c in x_train.dtypes[x_train.dtypes == object].index.values:
 	x_train[c] = (x_train[c] == True)
 
 print("Splitting into training and validation")
-split = 90000
+split = int(0.99*x_train.shape[0])
 x_train, y_train, x_valid, y_valid = x_train[:split], y_train[:split], x_train[split:], y_train[split:]
 x_train = x_train.values.astype(np.float32, copy=False)
 x_valid = x_valid.values.astype(np.float32, copy=False)
@@ -53,19 +53,15 @@ params['feature_fraction_seed'] = 2
 params['bagging_seed'] = 3
 """
 
-###
-#print(y_train.shape)
-#print(y_train.mean())
-#import sys; sys.exit()
-
+n_iters = 500
 watchlist = [d_valid]
-clf = lgb.train(params, d_train, 5, watchlist)
+clf = lgb.train(params, d_train, n_iters, watchlist)
 
 del d_train, d_valid; gc.collect()
 del x_train, x_valid; gc.collect()
 
 print("Loading and preparing test set")
-property_data = pd.read_csv("preprocessed/properties_2016.csv")
+property_data = pd.read_csv("preprocessed/properties_2017.csv")
 sample = pd.read_csv('data/sample_submission.csv')
 sample['parcelid'] = sample['ParcelId']
 df_test = sample.merge(property_data, on='parcelid', how='left')
