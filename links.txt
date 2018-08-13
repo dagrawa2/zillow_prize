@@ -1,0 +1,20 @@
+XGBoost, LightGBM, and OLS
+(kaggle kernel)
+https://www.kaggle.com/aharless/xgboost-lightgbm-and-ols
+
+Using LightGBM to predict price
+(kaggle kernel)
+https://www.kaggle.com/iamprateek/using-lightgbm-to-predict-price
+
+microsoft LightGBM with parameter tuning
+https://www.kaggle.com/garethjns/microsoft-lightgbm-with-parameter-tuning-0-823
+
+dask - a better way to work with large CSV files in python - python data
+http://pythondata.com/dask-large-csv-python/
+
+gradient boosting vs random forests
+https://medium.com/@aravanshad/gradient-boosting-versus-random-forest-cfa3fa8f0d80
+
+what is LightGBM, how to implement it, how to fine-tune its parameters
+https://medium.com/@pushkarmandot/https-medium-com-pushkarmandot-what-is-lightgbm-how-to-implement-it-how-to-fine-tune-the-parameters-60347819b7fc
+
