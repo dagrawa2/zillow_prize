@@ -1,8 +1,11 @@
 ﻿import gc
 import datetime
+import time
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
+
+time_0 = time.time()
 
 print("Loading data")
 x_train = pd.read_csv("preprocessed/merged_2016.csv")
@@ -58,7 +61,7 @@ params['bagging_seed'] = 3
 #print(x_train.mean())
 #import sys; sys.exit()
 
-n_iters = 500
+n_iters = 200
 watchlist = [d_valid]
 clf = lgb.train(params, d_train, n_iters, watchlist)
 
@@ -96,3 +99,5 @@ print("Saving predictions")
 sub.to_csv('results/preds.csv', index=False, float_format='%.4f')
 
 print("Done")
+
+print("Took ", np.round(time.time()-time_0, 3), " s")
