@@ -4,6 +4,7 @@ import json
 import pickle
 import pandas as pd
 import numpy as np
+from sklearn.datasets import load_boston
 
 def save_json(D, path):
 	with open(path, "w") as f:
@@ -47,6 +48,9 @@ def gen_train(year):
 	save_pickle(train_columns, "preprocessed/train_"+year+"_cols.list")
 
 def load_train(year):
+	if year == 0:
+		boston = load_boston()
+		return boston.data, boston.target
 	year = str(year)
 	x_train = pd.read_csv("preprocessed/train_"+year+".csv")
 	for c, dtype in zip(x_train.columns, x_train.dtypes):	

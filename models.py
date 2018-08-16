@@ -5,7 +5,10 @@ import time
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
-from sklearn.model_selection import GridSearchCV
+from hyperopt import hp, tpe, STATUS_OK, Trials
+from hyperopt.fmin import fmin
+from sklearn.metrics import make_scorer, mean_absolute_error
+from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.externals import joblib
 from utils import *
 	
@@ -20,8 +23,8 @@ def order_masked_params(D, param_grid):
 	return [inds_params[i] for i in inds]
 
 
-def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, verbose=0, out=None):
-	print("\n---\nCalling model_hyperopt on ", year, " data")
+def model_gridsearch(model, year, init_params, param_grid, fit_params={}, cv=2, verbose=0, out=None):
+	print("\n---\nCalling model_gridsearch on ", year, " data")
 	time_0 = time.time()
 	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	print("Loading training data")
@@ -41,6 +44,46 @@ def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, ve
 	args = {"model": model.__name__, "year": year, "cv": cv}
 	print("Saving results\n---\n")
 	cv_results.to_csv(out+"/cv_results.csv", index=False)
+	save_json(init_params, out+"/init_params.json")
+	save_json(param_grid, out+"/param_grid.json")
+	save_json(fit_params, out+"/fit_params.json")
+	save_json(args, out+"/args.json")
+	save_json(best, out+"/best.json")
+	save_json(times, out+"/times.json")
+
+def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, max_evals=10, n_cv_jobs=1, verbose=0, out=None):
+	if year == 0:
+		print("\n---\nCalling model_hyperopt on Boston data")
+	else:
+		print("\n---\nCalling model_hyperopt on ", year, " data")
+	time_0 = time.time()
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	print("Loading training data")
+	x_train, y_train = load_train(year)
+	param_list = list(param_grid.keys())
+	param_list.sort()
+	def objective(params):
+		if verbose > 0: print("[ ]  (", "  ".join([param+"="+str(params[param]) for param in params]), ")")
+		time_start = time.time()
+		estimator = model(**init_params, **params)
+		loss = cross_val_score(estimator, x_train, y_train, scoring=make_scorer(mean_absolute_error, greater_is_better=True), cv=cv, fit_params=fit_params, n_jobs=n_cv_jobs).mean()
+		time_elapsed = time.time()-time_start
+		if verbose > 0: print(". . .  loss=", np.round(loss, 3), "  time=", np.round(time_elapsed, 3))
+		return {"params": params, "loss": loss, "status": STATUS_OK, "time": time_elapsed}
+	print("Optimizing hyperparameters")
+	space = {key: hp.choice(key, val) for key, val in param_grid.items()}
+	trials = Trials()
+	best = fmin(fn=objective, space=space, algo=tpe.suggest, max_evals=max_evals, trials=trials)
+	best = {param: param_grid[param][i] for param, i in best.items()}
+	results = {param: [record["params"][param] for record in trials.results] for param in param_list}
+	results.update({col: [np.round(record[col], 3) for record in trials.results] for col in ["loss", "time"]})
+	cols = param_list + ["loss", "time"]
+	results_df = pd.DataFrame.from_dict(results)[cols]
+	times = {"mean_time": np.mean(results["time"]), "total_time": time.time()-time_0}
+	args = {"model": model.__name__, "year": year, "cv": cv, "max_evals": max_evals, "n_cv_jobs": n_cv_jobs}
+	print("Saving results\n---\n")
+	results_df.to_csv(out+"/results.csv", index=False)
+	save_json(trials.results, out+"/results.json")
 	save_json(init_params, out+"/init_params.json")
 	save_json(param_grid, out+"/param_grid.json")
 	save_json(fit_params, out+"/fit_params.json")
