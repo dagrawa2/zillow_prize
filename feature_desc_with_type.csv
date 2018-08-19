@@ -1,59 +1,59 @@
 ﻿feature,pretty_label,type_my_opinion,description
-'airconditioningtypeid',Air conditioning type,categorical, Type of cooling system present in the home (if any)
-'architecturalstyletypeid',Architectural style,categorical," Architectural style of the home (i.e. ranch, colonial, split-level, etc…)"
-'basementsqft',Finished basement area,numeric, Finished living area below or partially below ground level
-'bathroomcnt',Bathroom count,numeric, Number of bathrooms in home including fractional bathrooms
-'bedroomcnt',Bedroom count,numeric, Number of bedrooms in home 
-'buildingqualitytypeid',Building quality,numeric, Overall assessment of condition of the building from best (lowest) to worst (highest)
-'buildingclasstypeid',Building class,categorical,"The building framing type (steel frame, wood frame, concrete/brick) "
-'calculatedbathnbr',Calculated bathroom count,numeric, Number of bathrooms in home including fractional bathroom
-'decktypeid',Deck type,categorical,Type of deck (if any) present on parcel
-'threequarterbathnbr',Three-quarters bathroom count,numeric, Number of 3/4 bathrooms in house (shower + sink + toilet)
-'finishedfloor1squarefeet',Finished first floor area,numeric, Size of the finished living area on the first (entry) floor of the home
-'calculatedfinishedsquarefeet',Calculated finished area,numeric, Calculated total finished living area of the home 
-'finishedsquarefeet6',"Base unfinished and finished area',numeric,Base unfinished and finished area
-'finishedsquarefeet12',"Finished living area,numeric,Finished living area
-'finishedsquarefeet13',"Perimeter living area,numeric,Perimeter  living area
-'finishedsquarefeet15',Total area,numeric,Total area
-'finishedsquarefeet50',Finished first floor area,numeric, Size of the finished living area on the first (entry) floor of the home
-'fips',FIPS,categorical, Federal Information Processing Standard code -  see https://en.wikipedia.org/wiki/FIPS_county_code for more details
-'fireplacecnt',Fireplace count,numeric, Number of fireplaces in a home (if any)
-'fireplaceflag',Fireplace present,categorical, Is a fireplace present in this home 
-'fullbathcnt',Full bathroom count,numeric," Number of full bathrooms (sink, shower + bathtub, and toilet) present in home"
-'garagecarcnt',Garage count,numeric, Total number of garages on the lot including an attached garage
-'garagetotalsqft',Garage area,numeric, Total number of square feet of all garages on lot including an attached garage
-'hashottuborspa',Hot tub or spa present,categorical, Does the home have a hot tub or spa
-'heatingorsystemtypeid',Heating system type,categorical, Type of home heating system
-'latitude',Latitude,numeric, Latitude of the middle of the parcel multiplied by 10e6
-'longitude',Longitude,numeric, Longitude of the middle of the parcel multiplied by 10e6
-'lotsizesquarefeet',Lot area,numeric, Area of the lot in square feet
-'numberofstories',Stories,numeric, Number of stories or levels the home has
-'parcelid',Parcel ID,numeric, Unique identifier for parcels (lots) 
-'poolcnt',Pool count,numeric, Number of pools on the lot (if any)
-'poolsizesum',Pool area,numeric, Total square footage of all pools on property
-'pooltypeid10',Spa or hot tub,categorical, Spa or Hot Tub
-'pooltypeid2',Pool with spa or hot tub,categorical, Pool with Spa/Hot Tub
-'pooltypeid7',Pool without hot tub,categorical, Pool without hot tub
-'propertycountylandusecode',Property county land use code,categorical, County land use code i.e. it's zoning at the county level
-'propertylandusetypeid',Property land use type,categorical, Type of land use the property is zoned for
-'propertyzoningdesc',Property zoning description,categorical, Description of the allowed land uses (zoning) for that property
-'rawcensustractandblock',Raw census tract and block,categorical, Census tract and block ID combined - also contains blockgroup assignment by extension
-'censustractandblock',Census tract and block,categorical, Census tract and block ID combined - also contains blockgroup assignment by extension
-'regionidcounty',County,categorical,County in which the property is located
-'regionidcity',City,categorical, City in which the property is located (if any)
-'regionidzip',Zip code,categorical, Zip code in which the property is located
-'regionidneighborhood',Neighborhood,categorical,Neighborhood in which the property is located
-'roomcnt',Room count,numeric, Total number of rooms in the principal residence
-'storytypeid',Story type,categorical," Type of floors in a multi-story house (i.e. basement and main level, split-level, attic, etc.).  See tab for details."
-'typeconstructiontypeid',Construction type,categoriccal, What type of construction material was used to construct the home
-'unitcnt',Units,categorical," Number of units the structure is built into (i.e. 2 = duplex, 3 = triplex, etc...)"
-'yardbuildingsqft17',Yard and patio area',numeric,Patio in  yard
-'yardbuildingsqft26',Storage shed area,numeric,Storage shed/building in yard
-'yearbuilt',Year built,numeric, The Year the principal residence was built 
-'taxvaluedollarcnt',Total tax value,numeric,The total tax assessed value of the parcel
-'structuretaxvaluedollarcnt',Structure tax value,numeric,The assessed value of the built structure on the parcel
-'landtaxvaluedollarcnt',Land tax value,numeric,The assessed value of the land area of the parcel
-'taxamount',Property tax value,numeric,The total property tax assessed for that assessment year
-'assessmentyear',Tax assessment year,numeric,The year of the property tax assessment 
-'taxdelinquencyflag',Property tax passed due,categorical,Property taxes for this parcel are past due as of 2015
-'taxdelinquencyyear',Tax delinquency year,numeric,Year for which the unpaid propert taxes were due 
+airconditioningtypeid,Air conditioning type,categorical, Type of cooling system present in the home (if any)
+architecturalstyletypeid,Architectural style,categorical," Architectural style of the home (i.e. ranch, colonial, split-level, etc…)"
+basementsqft,Finished basement area,numeric, Finished living area below or partially below ground level
+bathroomcnt,Bathroom count,numeric, Number of bathrooms in home including fractional bathrooms
+bedroomcnt,Bedroom count,numeric, Number of bedrooms in home 
+buildingqualitytypeid,Building quality,numeric, Overall assessment of condition of the building from best (lowest) to worst (highest)
+buildingclasstypeid,Building class,categorical,"The building framing type (steel frame, wood frame, concrete/brick) "
+calculatedbathnbr,Calculated bathroom count,numeric, Number of bathrooms in home including fractional bathroom
+decktypeid,Deck type,categorical,Type of deck (if any) present on parcel
+threequarterbathnbr,Three-quarters bathroom count,numeric, Number of 3/4 bathrooms in house (shower + sink + toilet)
+finishedfloor1squarefeet,Finished first floor area,numeric, Size of the finished living area on the first (entry) floor of the home
+calculatedfinishedsquarefeet,Calculated finished area,numeric, Calculated total finished living area of the home 
+finishedsquarefeet6,Base unfinished and finished area,numeric,Base unfinished and finished area
+finishedsquarefeet12,Finished living area,numeric,Finished living area
+finishedsquarefeet13,Perimeter living area,numeric,Perimeter  living area
+finishedsquarefeet15,Total area,numeric,Total area
+finishedsquarefeet50,Finished first floor area,numeric, Size of the finished living area on the first (entry) floor of the home
+fips,FIPS,categorical, Federal Information Processing Standard code -  see https://en.wikipedia.org/wiki/FIPS_county_code for more details
+fireplacecnt,Fireplace count,numeric, Number of fireplaces in a home (if any)
+fireplaceflag,Fireplace present,categorical, Is a fireplace present in this home 
+fullbathcnt,Full bathroom count,numeric," Number of full bathrooms (sink, shower + bathtub, and toilet) present in home"
+garagecarcnt,Garage count,numeric, Total number of garages on the lot including an attached garage
+garagetotalsqft,Garage area,numeric, Total number of square feet of all garages on lot including an attached garage
+hashottuborspa,Hot tub or spa present,categorical, Does the home have a hot tub or spa
+heatingorsystemtypeid,Heating system type,categorical, Type of home heating system
+latitude,Latitude,numeric, Latitude of the middle of the parcel multiplied by 10e6
+longitude,Longitude,numeric, Longitude of the middle of the parcel multiplied by 10e6
+lotsizesquarefeet,Lot area,numeric, Area of the lot in square feet
+numberofstories,Stories,numeric, Number of stories or levels the home has
+parcelid,Parcel ID,numeric, Unique identifier for parcels (lots) 
+poolcnt,Pool count,numeric, Number of pools on the lot (if any)
+poolsizesum,Pool area,numeric, Total square footage of all pools on property
+pooltypeid10,Spa or hot tub,categorical, Spa or Hot Tub
+pooltypeid2,Pool with spa or hot tub,categorical, Pool with Spa/Hot Tub
+pooltypeid7,Pool without hot tub,categorical, Pool without hot tub
+propertycountylandusecode,Property county land use code,categorical, County land use code i.e. its zoning at the county level
+propertylandusetypeid,Property land use type,categorical, Type of land use the property is zoned for
+propertyzoningdesc,Property zoning description,categorical, Description of the allowed land uses (zoning) for that property
+rawcensustractandblock,Raw census tract and block,categorical, Census tract and block ID combined - also contains blockgroup assignment by extension
+censustractandblock,Census tract and block,categorical, Census tract and block ID combined - also contains blockgroup assignment by extension
+regionidcounty,County,categorical,County in which the property is located
+regionidcity,City,categorical, City in which the property is located (if any)
+regionidzip,Zip code,categorical, Zip code in which the property is located
+regionidneighborhood,Neighborhood,categorical,Neighborhood in which the property is located
+roomcnt,Room count,numeric, Total number of rooms in the principal residence
+storytypeid,Story type,categorical," Type of floors in a multi-story house (i.e. basement and main level, split-level, attic, etc.).  See tab for details."
+typeconstructiontypeid,Construction type,categoriccal, What type of construction material was used to construct the home
+unitcnt,Units,categorical," Number of units the structure is built into (i.e. 2 = duplex, 3 = triplex, etc...)"
+yardbuildingsqft17,Yard and patio area,numeric,Patio in  yard
+yardbuildingsqft26,Storage shed area,numeric,Storage shed/building in yard
+yearbuilt,Year built,numeric, The Year the principal residence was built 
+taxvaluedollarcnt,Total tax value,numeric,The total tax assessed value of the parcel
+structuretaxvaluedollarcnt,Structure tax value,numeric,The assessed value of the built structure on the parcel
+landtaxvaluedollarcnt,Land tax value,numeric,The assessed value of the land area of the parcel
+taxamount,Property tax value,numeric,The total property tax assessed for that assessment year
+assessmentyear,Tax assessment year,numeric,The year of the property tax assessment 
+taxdelinquencyflag,Property tax passed due,categorical,Property taxes for this parcel are past due as of 2015
+taxdelinquencyyear,Tax delinquency year,numeric,Year for which the unpaid propert taxes were due 

@@ -41,11 +41,17 @@ def gen_train(year):
 	print("Merging")
 	train_data = train_data.merge(property_data, on='parcelid', how='left')
 	train_data.drop(['parcelid', 'propertyzoningdesc', 'propertycountylandusecode'], axis=1, inplace=True)
+	train_data.drop("assessmentyear", axis=1, inplace=True)
 	train_columns = list(train_data.columns)
 	train_columns.remove('logerror')
+	fd = pd.read_csv("preprocessed/feature_desc_with_type.csv")
+	D = {k: v for k, v in zip(fd.feature.tolist(), fd.pretty_label.tolist())}
+	D.update({"taxpercentage": "Property tax percentage", "month": "Month"})
+	pretty_labels = [D[col] for col in train_columns]
 	print("Saving training data\n---\n")
 	train_data.to_csv("preprocessed/train_"+year+".csv", index=False)
-	save_json(train_columns, "preprocessed/train_"+year+"_cols.json")
+	save_json(train_columns, "preprocessed/train_columns_"+year+".json")
+	save_json(pretty_labels, "preprocessed/pretty_labels_"+year+".json")
 
 def load_train(year):
 	if year == 0:
@@ -67,7 +73,7 @@ def gen_test(year):
 	print("\n---\nCalling gen_test on year ", year)
 	year = str(year)
 	print("Loading data")
-	train_columns = load_json("preprocessed/train_"+year+"_cols.json")
+	train_columns = load_train_columns(int(year))
 	property_data = pd.read_csv("preprocessed/properties_"+year+".csv")
 	sample = pd.read_csv('data/sample_submission.csv')
 	sample['parcelid'] = sample['ParcelId']
@@ -95,7 +101,7 @@ def load_test(year):
 def load_train_columns(year):
 	if year == 0:
 		return ["col"+str(i+1) for i in range(13)]
-	return load_json("preprocessed/train_"+str(year)+"_cols.json")
+	return load_json("preprocessed/train_columns_"+str(year)+".json")
 
 def load_train_types(year):
 	if year == 0:
@@ -106,4 +112,4 @@ def load_train_types(year):
 def load_pretty_labels(year):
 	if year == 0:
 		return ["Column "+str(i+1) for i in range(13)]
-	return load_json("preprocessed/train_"+str(year)+"_cols.json")
+	return load_json("preprocessed/pretty_labels_"+str(year)+".json")

@@ -163,11 +163,12 @@ property_data.yardbuildingsqft17.fillna(0,inplace = True)
 
 # Bathrooms
 
-property_data.threequarterbathnbr.fillna(0, inplace=True)
-mask = property_data.bathroomcnt.notnull() & property_data.fullbathcnt.isnull()
-property_data.fullbathcnt.loc[mask] = property_data.bathroomcnt.loc[mask] - property_data.threequarterbathnbr.loc[mask]
+bathroomcnt = property_data['bathroomcnt'].value_counts().idxmax()
+property_data['bathroomcnt'] = property_data['bathroomcnt'].fillna(bathroomcnt)
 
-property_data.drop("bathroomcnt", axis=1, inplace=True)
+property_data.threequarterbathnbr.fillna(0, inplace=True)
+
+property_data.drop("fullbathcnt", axis=1, inplace=True)
 property_data.drop("calculatedbathnbr", axis=1, inplace=True)
 
 # * **"`airconditioningtypeid`"** - If "NaN", change to "5" for "None".
@@ -182,7 +183,7 @@ property_data.heatingorsystemtypeid.fillna(13,inplace = True)
 
 # * **"`buildingqualitytypeid`"** - Change "NaN" to most common value.
 # Fill in "NaN" "buildingqualitytypeid" with most common
-buildingqual = property_data['buildingqualitytypeid'].value_counts().argmax()
+buildingqual = property_data['buildingqualitytypeid'].value_counts().idxmax()
 property_data['buildingqualitytypeid'] = property_data['buildingqualitytypeid'].fillna(buildingqual)
 
 # * **"`unitcnt`"** - Number of units in a property. Change "NaN" to "1"
@@ -190,7 +191,7 @@ property_data.unitcnt.fillna(1,inplace = True)
 
 # * **"`propertyzoningdesc`"** - This seems like a very error-ridden column with so many unique values. It may provide some valuable info, so lets just fill the "NaN" with the most common value.
 # Fill in "NaN" "propertyzoningdesc" with most common
-propertyzoningdesc = property_data['propertyzoningdesc'].value_counts().argmax()
+propertyzoningdesc = property_data['propertyzoningdesc'].value_counts().idxmax()
 property_data['propertyzoningdesc'] = property_data['propertyzoningdesc'].fillna(propertyzoningdesc)
 
 # * **"`lotsizesquarefeet`"** - Area of lot in square feet. Fill "NaN" with average.
@@ -232,44 +233,42 @@ property_data.drop('taxamount', axis=1, inplace=True)
 
 # * **"`yearbuilt`"** - Year home was built. We can just fill in the "NaN" values with the most common value.
 # Fill in "NaN" "yearbuilt" with most common
-yearbuilt = property_data['yearbuilt'].value_counts().argmax()
+yearbuilt = property_data['yearbuilt'].value_counts().idxmax()
 property_data['yearbuilt'] = property_data['yearbuilt'].fillna(yearbuilt)
 
 # Fill in "fips" "NaN"s
-fips = property_data['fips'].value_counts().argmax()
+fips = property_data['fips'].value_counts().idxmax()
 property_data['fips'] = property_data['fips'].fillna(fips)
 
 # Fill in "propertylandusetypeid" "NaN"s
-propertylandusetypeid = property_data['propertylandusetypeid'].value_counts().argmax()
+propertylandusetypeid = property_data['propertylandusetypeid'].value_counts().idxmax()
 property_data['propertylandusetypeid'] = property_data['propertylandusetypeid'].fillna(propertylandusetypeid)
-property_data['latitude'] = property_data['latitude'].fillna(latitude)
-property_data['longitude'] = property_data['longitude'].fillna(longitude)
 
 # Fill in "rawcensustractandblock" "NaN"s
-rawcensustractandblock = property_data['rawcensustractandblock'].value_counts().argmax()
+rawcensustractandblock = property_data['rawcensustractandblock'].value_counts().idxmax()
 property_data['rawcensustractandblock'] = property_data['rawcensustractandblock'].fillna(rawcensustractandblock)
 
 # Fill in "assessmentyear" "NaN"s
-assessmentyear = property_data['assessmentyear'].value_counts().argmax()
+assessmentyear = property_data['assessmentyear'].value_counts().idxmax()
 property_data['assessmentyear'] = property_data['assessmentyear'].fillna(assessmentyear)
 
 # Fill in "bedroomcnt" "NaN"s
-bedroomcnt = property_data['bedroomcnt'].value_counts().argmax()
+bedroomcnt = property_data['bedroomcnt'].value_counts().idxmax()
 property_data['bedroomcnt'] = property_data['bedroomcnt'].fillna(bedroomcnt)
 
 # Fill in "roomcnt" "NaN"s
-roomcnt = property_data['roomcnt'].value_counts().argmax()
+roomcnt = property_data['roomcnt'].value_counts().idxmax()
 property_data['roomcnt'] = property_data['roomcnt'].fillna(roomcnt)
 
 # Fill in "propertycountylandusecode" "NaN"s
-propertycountylandusecode = property_data['propertycountylandusecode'].value_counts().argmax()
+propertycountylandusecode = property_data['propertycountylandusecode'].value_counts().idxmax()
 property_data['propertycountylandusecode'] = property_data['propertycountylandusecode'].fillna(propertycountylandusecode)
 
 ##
 
-latitude = property_data.latitude.value_counts().argmax()
+latitude = property_data.latitude.value_counts().idxmax()
 property_data.latitude.fillna(latitude, inplace=True)
-longitude = property_data.longitude.value_counts().argmax()
+longitude = property_data.longitude.value_counts().idxmax()
 property_data.longitude.fillna(longitude, inplace=True)
 
 print("Imputing zipcodes")
