@@ -45,12 +45,12 @@ def gen_train(year):
 	train_columns.remove('logerror')
 	print("Saving training data\n---\n")
 	train_data.to_csv("preprocessed/train_"+year+".csv", index=False)
-	save_pickle(train_columns, "preprocessed/train_"+year+"_cols.list")
+	save_json(train_columns, "preprocessed/train_"+year+"_cols.json")
 
 def load_train(year):
 	if year == 0:
 		boston = load_boston()
-		return boston.data, boston.target
+		return boston.data[:400], boston.target[:400]
 	year = str(year)
 	x_train = pd.read_csv("preprocessed/train_"+year+".csv")
 	for c, dtype in zip(x_train.columns, x_train.dtypes):	
@@ -67,7 +67,7 @@ def gen_test(year):
 	print("\n---\nCalling gen_test on year ", year)
 	year = str(year)
 	print("Loading data")
-	train_columns = load_pickle("preprocessed/train_"+year+"_cols.list")
+	train_columns = load_json("preprocessed/train_"+year+"_cols.json")
 	property_data = pd.read_csv("preprocessed/properties_"+year+".csv")
 	sample = pd.read_csv('data/sample_submission.csv')
 	sample['parcelid'] = sample['ParcelId']
@@ -82,6 +82,9 @@ def gen_test(year):
 	x_test.to_csv("preprocessed/test_"+year+".csv", index=False)
 
 def load_test(year):
+	if year == 0:
+		boston = load_boston()
+		return boston.data[400:], boston.target[400:]
 	year = str(year)
 	x_test = pd.read_csv("preprocessed/test_"+year+".csv")
 	for c in x_test.dtypes[x_test.dtypes == object].index.values:
@@ -89,3 +92,18 @@ def load_test(year):
 	x_test = x_test.values.astype(np.float32, copy=False)
 	return x_test
 
+def load_train_columns(year):
+	if year == 0:
+		return ["col"+str(i+1) for i in range(13)]
+	return load_json("preprocessed/train_"+str(year)+"_cols.json")
+
+def load_train_types(year):
+	if year == 0:
+		return ["float" for i in range(13)]
+	return load_json("preprocessed/train_"+str(year)+"_types.json")
+
+
+def load_pretty_labels(year):
+	if year == 0:
+		return ["Column "+str(i+1) for i in range(13)]
+	return load_json("preprocessed/train_"+str(year)+"_cols.json")
