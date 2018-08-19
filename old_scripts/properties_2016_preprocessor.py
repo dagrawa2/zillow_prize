@@ -1,27 +1,40 @@
 import pandas as pd
 import numpy as np
-from uszipcode import ZipcodeSearchEngine
+import scipy.stats as stats
 
 print("Loading data")
-property_data = pd.read_csv('data/properties_2017.csv')
+property_data = pd.read_csv('data/properties_2016.csv')
 
 # ### Pools & Hot tubs
 print("Preprocessing pools and hot tubs features")
 
+# There are actually multiple features related to pools: 
+# * **"`poolcnt`"** - Number of pools on a lot. "NaN" means "0 pools", so we can update that to reflect "0" instead of "NaN".
+# * **"`hashottuborspa`"** - Does the home have a hottub or a spa? "NaN" means "0 hottubs or spas", so we can update that to reflect "0" instead of "NaN".
+# * **"`poolsizesum`"** - Total square footage of pools on property. Similarly, "NaN" means "0 sqare feet of pools", so we can also adjust that to read "0". For homes that do have pools, but are missing this information, we will just fill the "NaN" with the median value of other homes with pools.
+# * **"`pooltypeid2`" & "`pooltypeid7`" & "`pooltypeid10`"** - Type of pool or hottub present on property. These categories will only contain non-null information if "`poolcnt`" or "`hashottuborspa`" contain non-null information. For the pool-related categories, we can fill the "NaN" value with a "0". And because "`pooltypeid10`" tells us the exact same information as "`hashottuborspa`", we can probably drop that category from our model.
+
 # "0 pools"
 property_data.poolcnt.fillna(0,inplace = True)
+
 # "0 hot tubs or spas"
 property_data.hashottuborspa.fillna(0,inplace = True)
+
 # Convert "True" to 1
 property_data.hashottuborspa.replace(to_replace = True, value = 1,inplace = True)
+
 # Set properties that have a pool but no info on poolsize equal to the median poolsize value.
 property_data.loc[property_data.poolcnt==1, 'poolsizesum'] = property_data.loc[property_data.poolcnt==1, 'poolsizesum'].fillna(property_data[property_data.poolcnt==1].poolsizesum.median())
+
 # "0 pools" = "0 sq ft of pools"
 property_data.loc[property_data.poolcnt==0, 'poolsizesum']=0
+
 # "0 pools with a spa/hot tub"
 property_data.pooltypeid2.fillna(0,inplace = True)
+
 # "0 pools without a hot tub"
 property_data.pooltypeid7.fillna(0,inplace = True)
+
 # Drop redundant feature
 property_data.drop('pooltypeid10', axis=1, inplace=True)
 
@@ -29,19 +42,36 @@ property_data.drop('pooltypeid10', axis=1, inplace=True)
 # ### Fireplace Data
 print("Preprocessing fireplace features")
 
+# There are two features related to fireplaces:
+# * **"`fireplaceflag`"** - Does the home have a fireplace? The answers are either "True" or "NaN". We will change the "True" values to "1" and the "NaN" values to "0".
+# * **"`fireplacecnt`"** - How many fireplaces in the home? We can replace "NaN" values with "0".
+# 
+# Looking deeper, it seems odd that over 10% of the homes have 1 or more fireplaces according to the "`fireplacecnt`" feature, but less than 1% of homes actually have "`fireplaceflag`" set to "True". There are obviously some errors with this data collection. To fix this, we will do the following:
+# * If "`fireplaceflag`" is "True" and "`fireplacecnt`" is "NaN", we will set "`fireplacecnt`" equal to the median value of "1".
+# * If "`fireplacecnt`" is 1 or larger "`fireplaceflag`" is "NaN", we will set "`fireplaceflag`" to "True".
+# * We will change "True" in "`fireplaceflag`" to "1", so we can more easily analyze the information.
+
 # If "fireplaceflag" is "True" and "fireplacecnt" is "NaN", we will set "fireplacecnt" equal to the median value of "1".
 property_data.loc[(property_data['fireplaceflag'] == True) & (property_data['fireplacecnt'].isnull()), ['fireplacecnt']] = 1
+
 # If 'fireplacecnt' is "NaN", replace with "0"
 property_data.fireplacecnt.fillna(0,inplace = True)
+
 # If "fireplacecnt" is 1 or larger "fireplaceflag" is "NaN", we will set "fireplaceflag" to "True".
 property_data.loc[(property_data['fireplacecnt'] >= 1.0) & (property_data['fireplaceflag'].isnull()), ['fireplaceflag']] = True
 property_data.fireplaceflag.fillna(0,inplace = True)
+
 # Convert "True" to 1
 property_data.fireplaceflag.replace(to_replace = True, value = 1,inplace = True)
 
 
 # ### Garage Data
 print("Preprocessing garage features")
+
+# There are two features related to garages:
+# * **"`garagecarcnt`"** - How many garages does the house have? Easy fix here - we can replace "NaN" with "0" if a house doesn't have a garage.
+# * **"`garagetotalsqft`"** - What is the square footage of the garage? Again, if a home doesn't have a garage, we can replace "NaN" with "0".
+# Unlike the **Fireplace** category where we have several Type II errors (false negative), we do not have any scenarios where a home has a "`garagecarcnt`" of "NaN", but a "`garagetotalsqft`" of some value.
 
 property_data.garagecarcnt.fillna(0,inplace = True)
 property_data.garagetotalsqft.fillna(0,inplace = True)
@@ -69,6 +99,8 @@ property_data.drop('taxdelinquencyyear', axis=1, inplace=True)
 print("Preprocessing the rest of the features")
 
 # * **"`storytypeid`"** - Numerical ID that describes all types of homes. Mostly missing, so we should drop this category. Crazy idea would be to try and integrate street view of each home, and use image recognition to classify each type of story ID.          
+
+
 # Drop "storytypeid"
 property_data.drop('storytypeid', axis=1, inplace=True)
 
@@ -161,14 +193,26 @@ property_data['finishedsquarefeet50'].fillna((property_data['finishedsquarefeet5
 # Replace 'yardbuildingsqft17' "NaN"s with "0".
 property_data.yardbuildingsqft17.fillna(0,inplace = True)
 
-# Bathrooms
+# Now let's dig into the bathroom features.
+# * **"`threequarterbathnbr`"** - Number of 3/4 baths = shower, sink, toilet.
+# * **"`fullbathcnt`"** - Number of full bathrooms - tub, sink, toilet
+# * **"`calculatedbathnbr`"** - Total number of bathrooms including partials.
+# It seems like **"`calculatedbathnbr`"** should encompass the other two, so I will probably drop **"`threequarterbathnbr`"** and **"`fullbathcnt`"**, but let's take a look at some data first...
 
-property_data.threequarterbathnbr.fillna(0, inplace=True)
-mask = property_data.bathroomcnt.notnull() & property_data.fullbathcnt.isnull()
-property_data.fullbathcnt.loc[mask] = property_data.bathroomcnt.loc[mask] - property_data.threequarterbathnbr.loc[mask]
+bathrooms = property_data[property_data['fullbathcnt'].notnull() & property_data['threequarterbathnbr'].notnull() & property_data['calculatedbathnbr'].notnull()]
+bathrooms[['fullbathcnt','threequarterbathnbr','calculatedbathnbr']]
 
-property_data.drop("bathroomcnt", axis=1, inplace=True)
-property_data.drop("calculatedbathnbr", axis=1, inplace=True)
+# It looks like **"`threequarterbathnbr`"** is only a half-bath. Because **"`calculatedbathnbr`"** incorporates the other two, we will drop them. Then we will fill in the missing values for **"`calculatedbathnbr`"** with the most common answer.
+
+# Drop "threequarterbathnbr"
+property_data.drop('threequarterbathnbr', axis=1, inplace=True)
+
+# Drop "fullbathcnt"
+property_data.drop('fullbathcnt', axis=1, inplace=True)
+
+# Fill in "NaN" "calculatedbathnbr" with most common
+bathroommode = property_data['calculatedbathnbr'].value_counts().argmax()
+property_data['calculatedbathnbr'] = property_data['calculatedbathnbr'].fillna(bathroommode)
 
 # * **"`airconditioningtypeid`"** - If "NaN", change to "5" for "None".
 property_data.airconditioningtypeid.fillna(5,inplace = True)
@@ -229,6 +273,11 @@ property_data['taxpercentage'].fillna((property_data['taxpercentage'].mean()), i
 # Drop "taxamount"
 property_data.drop('taxamount', axis=1, inplace=True)
 
+# * **"`regionidcity`"** - City property is located in. This is redundant information, so we will drop.
+
+# In[66]:
+# Drop "regionidcity"
+property_data.drop('regionidcity', axis=1, inplace=True)
 
 # * **"`yearbuilt`"** - Year home was built. We can just fill in the "NaN" values with the most common value.
 # Fill in "NaN" "yearbuilt" with most common
@@ -242,7 +291,16 @@ property_data['fips'] = property_data['fips'].fillna(fips)
 # Fill in "propertylandusetypeid" "NaN"s
 propertylandusetypeid = property_data['propertylandusetypeid'].value_counts().argmax()
 property_data['propertylandusetypeid'] = property_data['propertylandusetypeid'].fillna(propertylandusetypeid)
+
+# Drop 'regionidcounty'
+property_data.drop('regionidcounty', axis=1, inplace=True)
+
+# Fill in "latitude" "NaN"s
+latitude = property_data['latitude'].value_counts().argmax()
 property_data['latitude'] = property_data['latitude'].fillna(latitude)
+
+# Fill in "longitude" "NaN"s
+longitude = property_data['longitude'].value_counts().argmax()
 property_data['longitude'] = property_data['longitude'].fillna(longitude)
 
 # Fill in "rawcensustractandblock" "NaN"s
@@ -257,6 +315,10 @@ property_data['assessmentyear'] = property_data['assessmentyear'].fillna(assessm
 bedroomcnt = property_data['bedroomcnt'].value_counts().argmax()
 property_data['bedroomcnt'] = property_data['bedroomcnt'].fillna(bedroomcnt)
 
+# Fill in "bathroomcnt" "NaN"s
+bathroomcnt = property_data['bathroomcnt'].value_counts().argmax()
+property_data['bathroomcnt'] = property_data['bathroomcnt'].fillna(bathroomcnt)
+
 # Fill in "roomcnt" "NaN"s
 roomcnt = property_data['roomcnt'].value_counts().argmax()
 property_data['roomcnt'] = property_data['roomcnt'].fillna(roomcnt)
@@ -265,53 +327,12 @@ property_data['roomcnt'] = property_data['roomcnt'].fillna(roomcnt)
 propertycountylandusecode = property_data['propertycountylandusecode'].value_counts().argmax()
 property_data['propertycountylandusecode'] = property_data['propertycountylandusecode'].fillna(propertycountylandusecode)
 
-##
+# Fill in "regionidzip " "NaN"s
+regionidzip = property_data['regionidzip'].value_counts().argmax()
+property_data['regionidzip'] = property_data['regionidzip'].fillna(regionidzip)
 
-latitude = property_data.latitude.value_counts().argmax()
-property_data.latitude.fillna(latitude, inplace=True)
-longitude = property_data.longitude.value_counts().argmax()
-property_data.longitude.fillna(longitude, inplace=True)
+# Okay, so we have reduced our messy, sparce dataset from 58 columns down to 42 completely full columns. Next, we will graph some simple statistics.
 
-print("Imputing zipcodes")
-inds = np.arange(property_data.shape[0])
-inds = inds[property_data.regionidzip.isnull().values]
-print(len(inds), " zipcodes to impute")
-search = ZipcodeSearchEngine()
-zipcodes = np.array([int(search.by_coordinate(property_data.latitude.iloc[i]*1e-6, property_data.longitude.iloc[i]*1e-6, radius=50, returns=1)[0]["Zipcode"]) for i in inds])
-property_data.regionidzip.loc[inds] = zipcodes
-
-print("Imputing county")
-mask = property_data.regionidcounty.isnull().values
-zips = np.unique(property_data.regionidzip.loc[mask].values)
-for z in zips:
-	mask_z = (property_data.regionidzip==z).values
-	counties, counts = np.unique(property_data.regionidcounty.loc[np.logical_and(np.logical_not(mask), mask_z)].values, return_counts=True)
-	county = counties[counts.argmax()]
-	property_data.regionidcounty.loc[np.logical_and(mask, mask_z)] = county
-
-print("Imputing city")
-mask = property_data.regionidcity.isnull().values
-zips = np.unique(property_data.regionidzip.loc[mask].values)
-zips_no_city = []
-for z in zips:
-	mask_z = (property_data.regionidzip==z).values
-	cities, counts = np.unique(property_data.regionidcity.loc[np.logical_and(np.logical_not(mask), mask_z)].values, return_counts=True)
-	if len(counts) > 0:
-		city = cities[counts.argmax()]
-		property_data.regionidcity.loc[np.logical_and(mask, mask_z)] = city
-else:
-	zips_no_city.append(z)
-
-print(len(zips_no_city), " zipcodes with no city")
-print("Imputing missing city with mean")
-city = int(property_data.regionidcity.mean())
-print("Confirming that imputed city does not already exist")
-if (property_data.regionidcity==city).sum() == 0:
-	print("Confirmed")
-property_data.regionidcity.fillna(city, inplace=True)
-
-
-"""
 # ### Create New Features
 print("Creating new features")
 
@@ -319,9 +340,8 @@ property_data['taxpersqft'] = property_data['taxvaluedollarcnt'] / property_data
 property_data['bathpersqft'] = property_data['bathroomcnt'] / property_data['calculatedfinishedsquarefeet']
 property_data['roompersqft'] = property_data['roomcnt'] / property_data['calculatedfinishedsquarefeet']
 property_data['bedroompersqft'] = property_data['bedroomcnt'] / property_data['calculatedfinishedsquarefeet']
-"""
 
 print("Saving preprocessed data")
-property_data.to_csv('preprocessed/properties_2017.csv', index=False)
+property_data.to_csv('preprocessed/properties_2016.csv', index=False)
 
 print("Done")
