@@ -58,6 +58,8 @@ def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, ma
 		print("\n---\nCalling model_hyperopt on ", year, " data")
 	time_0 = time.time()
 	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	out = out + "/" + str(year)
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	print("Loading training data")
 	x_train, y_train = load_train(year)
 	param_list = list(param_grid.keys())
@@ -67,9 +69,11 @@ def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, ma
 		time_start = time.time()
 		estimator = model(**init_params, **params)
 		loss = cross_val_score(estimator, x_train, y_train, scoring=make_scorer(mean_absolute_error, greater_is_better=True), cv=cv, fit_params=fit_params, n_jobs=n_cv_jobs).mean()
+		if "early_stopping_rounds" in fit_params:
+			loss, best_iter = loss
 		time_elapsed = time.time()-time_start
 		if verbose > 0: print(". . .  loss=", np.round(loss, 3), "  time=", np.round(time_elapsed, 3))
-		return {"params": params, "loss": loss, "status": STATUS_OK, "time": time_elapsed}
+		return {"params": params, "loss": loss, "status": STATUS_OK, "best_iter": best_iter, "time": time_elapsed}
 	print("Optimizing hyperparameters")
 	space = {key: hp.choice(key, val) for key, val in param_grid.items()}
 	trials = Trials()
@@ -92,9 +96,12 @@ def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, ma
 	save_json(times, out+"/times.json")
 
 
-def model_pred(model, year, init_params, fit_params={}, save_model=False, out=None):
-	print("\n---\nCalling model_pred on year ", year, " data")
+def model_run(model, year, init_params, fit_params={}, save_model=False, out=None):
+	print("\n---\nCalling model_run on year ", year, " data")
 	time_0 = time.time()
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	out_preds = out
+	out = out + "/" + str(year)
 	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	print("Loading training data")
 	x_train, y_train = load_train(year)
@@ -108,13 +115,13 @@ def model_pred(model, year, init_params, fit_params={}, save_model=False, out=No
 		joblib.dump(estimator, out+"/model.jl")
 	print("Loading test data")
 	x_test = load_test(year)
-	train_columns = load_pickle("preprocessed/train_"+str(year)+"_cols.list")
+	train_columns = load_train_columns(year)
 	month_col_index = train_columns.index("month")
 	print("Loading submission")
 	if year == 2016:
 		sub = pd.read_csv("data/sample_submission.csv")
 	else:
-		sub = pd.read_csv(out+"/preds.csv")
+		sub = pd.read_csv(out_preds+"/preds.csv")
 	time_1 = time.time()
 	print("Predicting")
 	for month in [10, 11, 12]:
@@ -123,9 +130,13 @@ def model_pred(model, year, init_params, fit_params={}, save_model=False, out=No
 		sub[str(year)+str(month)] = estimator.predict(x_test)
 	time_2 = time.time()
 	print("Saving results\n---\n")
-	sub.to_csv(out+"/preds.csv", index=False, float_format='%.4f')
+	sub.to_csv(out_preds+"/preds.csv", index=False, float_format='%.4f')
+	importances = pd.DataFrame.from_dict({"feature": train_columns, "importance": estimator.feature_importances_})[["feature", "importance"]]
+	importances.sort_values(by="importance", axis=0, ascending=False, inplace=True)
+	importances.to_csv(out+"/importances.csv", index=False)
 	times = {"pred_time": time_2-time_1, "total_time": time.time()-time_0}
 	args = {"model": model.__name__, "year": year}
+	fit_params.pop("callbacks", None)
 	save_json(init_params, out+"/init_params.json")
 	save_json(fit_params, out+"/fit_params.json")
 	save_json(args, out+"/args.json")

@@ -27,6 +27,8 @@ def explained_variance_ratio(year, out=None):
 	else:
 		print("\n---\nCalling explained_variance_ratio on ", year, " data")
 	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	out = out + "/" + str(year)
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	print("Loading training data")
 	x_train, _ = load_train(year)
 	print("Standardizing")
@@ -46,6 +48,8 @@ def pca(year, n_components=1, out=None):
 		print("\n---\nCalling pca on Boston data")
 	else:
 		print("\n---\nCalling pca on ", year, " data")
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	out = out + "/" + str(year)
 	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	print("Loading training data")
 	x_train, _ = load_train(year)
@@ -78,6 +82,8 @@ def corrs(year, absolute=False, out=None):
 		print("\n---\nCalling corrs on Boston data")
 	else:
 		print("\n---\nCalling cors on ", year, " data")
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	out = out + "/" + str(year)
 	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	print("Loading training data")
 	x_train, y_train = load_train(year)
@@ -113,14 +119,17 @@ def corrs(year, absolute=False, out=None):
 	np.save(out+"/pearson"+abs_filename+".npy", pearson)
 	np.save(out+"/spearman"+abs_filename+".npy", spearman)
 	corrs_with_y.to_csv(out+"/corrs_with_y"+abs_filename+".csv", index=False)
-	corrs_x.to_csv(out+"/corrs_x"+abs_filename+".csv", index=False)
+	corrs_x.to_csv(out+"/corrs_x.csv", index=False)
 	corrs_with_y_pearson_sorted.to_csv(out+"/corrs_with_y_pearson_sorted"+abs_filename+".csv", index=False)
 	corrs_with_y_spearman_sorted.to_csv(out+"/corrs_with_y_spearman_sorted"+abs_filename+".csv", index=False)
-	corrs_x_pearson_sorted.to_csv(out+"/corrs_x_pearson_sorted"+abs_filename+".csv", index=False)
-	corrs_x_spearman_sorted.to_csv(out+"/corrs_x_spearman_sorted"+abs_filename+".csv", index=False)
+	corrs_x_pearson_sorted.to_csv(out+"/corrs_x_pearson_sorted.csv", index=False)
+	corrs_x_spearman_sorted.to_csv(out+"/corrs_x_spearman_sorted.csv", index=False)
 
 def plot_evr(year, max_k=None, out=None):
 	print("\n---\nCalling plot_ever on ", out, "/evr.csv")
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	out = out + "/" + str(year)
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	os.system("if [ ! -d "+out+"/plots ]; then mkdir "+out+"/plots; fi")
 	print("Loading data")
 	data = pd.read_csv(out+"/evr.csv").values[:max_k]
@@ -136,6 +145,9 @@ def plot_evr(year, max_k=None, out=None):
 
 def plot_transactions_per_month(year, out=None):
 	print("\n---\nCalling plot_transactions_per_month on ", year, " data")
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	out = out + "/" + str(year)
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	os.system("if [ ! -d "+out+"/plots ]; then mkdir "+out+"/plots; fi")
 	print("Loading month data")
 	train_columns = load_train_columns(year)
@@ -161,6 +173,9 @@ def plot_cross_sections(year, absolute=False, out=None):
 		print("\n---\nCalling plot_cross_sections on Boston data")
 	else:
 		print("\n---\nCalling plot_cross_sections on ", year, " data")
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	out = out + "/" + str(year)
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	os.system("if [ ! -d "+out+"/plots ]; then mkdir "+out+"/plots; fi")
 	print("Loading training data")
 	x_train, y_train = load_train(year)
@@ -190,6 +205,9 @@ def plot_corrs(year, out=None):
 		print("\n---\nCalling plot_corrs on Boston data")
 	else:
 		print("\n---\nCalling plot_corrs on ", year, " data")
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	out = out + "/" + str(year)
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	os.system("if [ ! -d "+out+"/plots ]; then mkdir "+out+"/plots; fi")
 	data = np.abs( pd.read_csv(out+"/corrs_with_y.csv", usecols=["pearson", "spearman"]).values )
 	fig = plt.figure()

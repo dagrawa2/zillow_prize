@@ -1,23 +1,36 @@
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
-from models import lgbm_pred
+import lightgbm as lgb
+from models import model_run
 from utils import *
+
+class counter(object):
+
+	def __init__(self):
+		self.count = 1
+
+	def __call__(self, dummy):
+		print("[", self.count, "] . . . ")
+		self.count += 1
+
 
 init_params = {
 	"boosting_type": "gbdt",
 	"objective": "regression",
 	"metric": "mae",
+	"n_estimators": 400,
 	"learning_rate": 0.002,
 	"sub_feature": 0.5,
 	"num_leaves": 60,
 	"min_data": 500,
-	"min_hessian": 1
+	"min_hessian": 1,
+	"importance_type": "gain",
+	"n_jobs": -1
 }
 
 fit_params = {
-	"num_boost_round": 200
+	"callbacks": [counter()]
 }
 
-lgbm_pred(2016, init_params, fit_params=fit_params, save_model=True, out="results/lgbm")
+model_run(lgb.LGBMRegressor, 2017, init_params, fit_params=fit_params, save_model=True, out="results/lgbm")
 
 print("Done")

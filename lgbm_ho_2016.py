@@ -26,6 +26,6 @@ fit_params = {
 	"early_stopping_rounds": 5
 }
 
-model_hyperopt(lgb.LGBMRegressor, 2016, init_params, param_grid, fit_params=fit_params, cv=3, max_evals=100, n_cv_jobs=3, verbose=1, out="results/lgbm_ho_2016")
+model_hyperopt(lgb.LGBMRegressor, 2016, init_params, param_grid, fit_params=fit_params, cv=3, max_evals=100, n_cv_jobs=3, verbose=1, out="results/lgbm_ho2")
 
 print("Done")
