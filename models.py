@@ -122,7 +122,7 @@ def model_run(model, year, init_params, fit_params={}, save_model=False, pca=Fal
 	x_test = load_test(year, pca=pca)
 	if pca:
 		x_test, update = x_test
-		train_columns = ["pc"+str(i) for i in range(1, x_train.shape[1]+1)]
+		train_columns = ["pc"+str(i+1) for i in range(x_test.shape[1])]
 	else:
 		train_columns = load_train_columns(year)
 		month_col_index = train_columns.index("month")

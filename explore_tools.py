@@ -82,7 +82,7 @@ def pca(year, n_components=1, out=None):
 	update = P[i]/std[0,i]
 	update = update.reshape((1, -1))
 	print("Saving update matrix")
-	np.save("preprocessed/x_train_pca_update_"+str(year)+".npy", update)
+	np.save("preprocessed/x_test_pca_update_"+str(year)+".npy", update)
 
 def corrs(year, absolute=False, out=None):
 	if year == 0:
