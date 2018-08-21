@@ -41,7 +41,7 @@ def gen_train(year):
 	print("Merging")
 	train_data = train_data.merge(property_data, on='parcelid', how='left')
 	train_data.drop(['parcelid', 'propertyzoningdesc', 'propertycountylandusecode'], axis=1, inplace=True)
-	train_data.drop("assessmentyear", axis=1, inplace=True)
+	train_data.drop(["assessmentyear", "rawcensustractandblock"], axis=1, inplace=True)
 	train_columns = list(train_data.columns)
 	train_columns.remove('logerror')
 	fd = pd.read_csv("preprocessed/feature_desc_with_type.csv")
@@ -89,13 +89,13 @@ def gen_test(year):
 	print("Saving test data\n---\n")
 	x_test.to_csv("preprocessed/test_"+year+".csv", index=False)
 
-def load_test(year, pca=pca):
+def load_test(year, pca=False):
 	if year == 0:
 		boston = load_boston()
 		return boston.data[400:], boston.target[400:]
 	year = str(year)
 	if pca:
-		return np.load("preprocessed/x_test_pca_"+year+".npy"), np.load("preprocessed/x_test_pca_update_"+year+".npy)
+		return np.load("preprocessed/x_test_pca_"+year+".npy"), np.load("preprocessed/x_test_pca_update_"+year+".npy")
 	x_test = pd.read_csv("preprocessed/test_"+year+".csv")
 	for c in x_test.dtypes[x_test.dtypes == object].index.values:
 		x_test[c] = (x_test[c] == True)

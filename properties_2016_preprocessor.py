@@ -60,7 +60,6 @@ property_data.taxdelinquencyflag.fillna(0,inplace = True)
 # Change "Y" to "1"
 property_data.taxdelinquencyflag.replace(to_replace = 'Y', value = 1,inplace = True)
 
-
 # Drop "taxdelinquencyyear"
 property_data.drop('taxdelinquencyyear', axis=1, inplace=True)
 
@@ -175,7 +174,6 @@ property_data['propertyzoningdesc'] = property_data['propertyzoningdesc'].fillna
 property_data['lotsizesquarefeet'].fillna((property_data['lotsizesquarefeet'].mean()), inplace=True)
 
 # * "`censustractandblock`" & "`rawcensustractandblock`" - Census tract and block ID combined. Look like duplicate values. I think we should drop these because they are related to location which is covered by "`longitude`" and "`latitude`". Let's view the values first.
-
 # These look like information we might be able to work with. Let's just drop "`censustractandblock`" because it is the same as "`rawcensustractandblock`".
 
 # Drop "censustractandblock"
@@ -217,8 +215,8 @@ propertylandusetypeid = property_data['propertylandusetypeid'].value_counts().id
 property_data['propertylandusetypeid'] = property_data['propertylandusetypeid'].fillna(propertylandusetypeid)
 
 # Fill in "rawcensustractandblock" "NaN"s
-rawcensustractandblock = property_data['rawcensustractandblock'].value_counts().idxmax()
-property_data['rawcensustractandblock'] = property_data['rawcensustractandblock'].fillna(rawcensustractandblock)
+#rawcensustractandblock = property_data['rawcensustractandblock'].value_counts().idxmax()
+#property_data['rawcensustractandblock'] = property_data['rawcensustractandblock'].fillna(rawcensustractandblock)
 
 # Fill in "assessmentyear" "NaN"s
 assessmentyear = property_data['assessmentyear'].value_counts().idxmax()

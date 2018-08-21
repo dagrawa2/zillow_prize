@@ -68,9 +68,10 @@ def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, ma
 		if verbose > 0: print("[ ]  (", "  ".join([param+"="+str(params[param]) for param in params]), ")")
 		time_start = time.time()
 		estimator = model(**init_params, **params)
-		loss = cross_val_score(estimator, x_train, y_train, scoring=make_scorer(mean_absolute_error, greater_is_better=True), cv=cv, fit_params=fit_params, n_jobs=n_cv_jobs).mean()
+		loss = cross_val_score(estimator, x_train, y_train, scoring=make_scorer(mean_absolute_error, greater_is_better=True), cv=cv, fit_params=fit_params, n_jobs=n_cv_jobs)
 		if "early_stopping_rounds" in fit_params:
 			loss, best_iter = loss
+		loss = loss.mean()
 		time_elapsed = time.time()-time_start
 		if verbose > 0: print(". . .  loss=", np.round(loss, 3), "  time=", np.round(time_elapsed, 3))
 		return {"params": params, "loss": loss, "status": STATUS_OK, "best_iter": best_iter, "time": time_elapsed}
@@ -80,11 +81,11 @@ def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, ma
 	best = fmin(fn=objective, space=space, algo=tpe.suggest, max_evals=max_evals, trials=trials)
 	best = {"params": {param: param_grid[param][i] for param, i in best.items()}}
 	best_trials = [record for record in trials.results if record["params"] == best["params"]]
-		cols = ["loss", "best_iter", "time"] if "early_stopping_rounds" in fit_params else ["loss", "time"]
+	cols = ["loss", "best_iter", "time"] if "early_stopping_rounds" in fit_params else ["loss", "time"]
 	for col in cols:
 		best.update({col: np.array([record[col] for record in best_trials]).mean()})
 	results = {param: [record["params"][param] for record in trials.results] for param in param_list}
-	results.update({col: [np.round(record[col], 3) for record in trials.results] for col in cols)
+	results.update({col: [np.round(record[col], 3) for record in trials.results] for col in cols})
 	cols = param_list + cols
 	results_df = pd.DataFrame.from_dict(results)[cols]
 	times = {"mean_time": np.mean(results["time"]), "total_time": time.time()-time_0}
@@ -100,7 +101,7 @@ def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, ma
 	save_json(times, out+"/times.json")
 
 
-def model_run(model, year, init_params, fit_params={}, save_model=False, pca=pca, out=None):
+def model_run(model, year, init_params, fit_params={}, save_model=False, pca=False, out=None):
 	print("\n---\nCalling model_run on year ", year, " data")
 	time_0 = time.time()
 	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")

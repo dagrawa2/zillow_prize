@@ -65,7 +65,7 @@ def pca(year, n_components=1, out=None):
 	print("Projecting training data")
 	x_train = x_train.dot(P)
 	print("Saving projected training data")
-	np.save("preprocessed/x_train_pca_"+str(year).npy", x_train)
+	np.save("preprocessed/x_train_pca_"+str(year)+".npy", x_train)
 	del x_train; gc.collect()
 	del V; gc.collect()
 	print("Loading test data")
@@ -275,11 +275,11 @@ def plot_corrs(year, out=None):
 
 def fraction_missing(year, out=None):
 	print("\n---\nCalling fraction_missing on ", year, " data")
-#	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	out = out + "/" + str(year)
-#	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	print("Loading property data")
-	property_data = pd.read_csv("data/properties_"+str(year)+".csv", usecols=["parcelid", "regionidcity", "regionidcounty", "regionidzip", "regionidneighborhood", "latitude", "longitude"])
+	property_data = pd.read_csv("data/properties_"+str(year)+".csv")  # , usecols=["parcelid", "regionidcity", "regionidcounty", "regionidzip", "regionidneighborhood", "latitude", "longitude"])
 	print("Computing fraction missing")
 	miss = property_data.drop("parcelid", axis=1).isnull().mean().sort_values(ascending=False)
 	miss = pd.DataFrame({"feature": miss.index, "fraction_missing": miss.values})[["feature", "fraction_missing"]]
@@ -288,10 +288,10 @@ def fraction_missing(year, out=None):
 
 def plot_fraction_missing(year, n_features=None, out=None):
 	print("\n---\nCalling plot_fraction_missing on ", year, " data")
-#	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	out = out + "/" + str(year)
-#	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
-#	os.system("if [ ! -d "+out+"/plots ]; then mkdir "+out+"/plots; fi")
+	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	os.system("if [ ! -d "+out+"/plots ]; then mkdir "+out+"/plots; fi")
 	print("Plotting")
 	miss = pd.read_csv(out+"/miss.csv", nrows=n_features)
 	miss = pd.Series(miss["fraction_missing"], index=miss["feature"])
