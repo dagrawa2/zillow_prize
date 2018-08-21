@@ -1,4 +1,7 @@
+__pycache__
 data
 preprocessed
+results
 *.csv
+*.npy
 out.txt

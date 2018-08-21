@@ -53,7 +53,7 @@ def gen_train(year):
 	save_json(train_columns, "preprocessed/train_columns_"+year+".json")
 	save_json(pretty_labels, "preprocessed/pretty_labels_"+year+".json")
 
-def load_train(year):
+def load_train(year, pca=False):
 	if year == 0:
 		boston = load_boston()
 		return boston.data[:400], boston.target[:400]
@@ -67,6 +67,8 @@ def load_train(year):
 	for c in x_train.dtypes[x_train.dtypes == object].index.values:
 		x_train[c] = (x_train[c] == True)
 	x_train = x_train.values.astype(np.float32, copy=False)
+	if pca:
+		return np.load("preprocessed/x_train_pca_"+year+".npy"), y_train
 	return x_train, y_train
 
 def gen_test(year):
@@ -81,17 +83,19 @@ def gen_test(year):
 	df_test = sample.merge(property_data, on='parcelid', how='left')
 	del property_data; gc.collect()
 	del sample; gc.collect()
-	df_test["month"] = 0
+	df_test["month"] = 9
 	x_test = df_test[train_columns]
 	del df_test; gc.collect()
 	print("Saving test data\n---\n")
 	x_test.to_csv("preprocessed/test_"+year+".csv", index=False)
 
-def load_test(year):
+def load_test(year, pca=pca):
 	if year == 0:
 		boston = load_boston()
 		return boston.data[400:], boston.target[400:]
 	year = str(year)
+	if pca:
+		return np.load("preprocessed/x_test_pca_"+year+".npy"), np.load("preprocessed/x_test_pca_update_"+year+".npy)
 	x_test = pd.read_csv("preprocessed/test_"+year+".csv")
 	for c in x_test.dtypes[x_test.dtypes == object].index.values:
 		x_test[c] = (x_test[c] == True)

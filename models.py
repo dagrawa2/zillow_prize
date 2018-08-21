@@ -51,7 +51,7 @@ def model_gridsearch(model, year, init_params, param_grid, fit_params={}, cv=2, 
 	save_json(best, out+"/best.json")
 	save_json(times, out+"/times.json")
 
-def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, max_evals=10, n_cv_jobs=1, verbose=0, out=None):
+def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, max_evals=10, n_cv_jobs=1, verbose=0, pca=False, out=None):
 	if year == 0:
 		print("\n---\nCalling model_hyperopt on Boston data")
 	else:
@@ -61,7 +61,7 @@ def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, ma
 	out = out + "/" + str(year)
 	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	print("Loading training data")
-	x_train, y_train = load_train(year)
+	x_train, y_train = load_train(year, pca=pca)
 	param_list = list(param_grid.keys())
 	param_list.sort()
 	def objective(params):
@@ -78,13 +78,17 @@ def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, ma
 	space = {key: hp.choice(key, val) for key, val in param_grid.items()}
 	trials = Trials()
 	best = fmin(fn=objective, space=space, algo=tpe.suggest, max_evals=max_evals, trials=trials)
-	best = {param: param_grid[param][i] for param, i in best.items()}
+	best = {"params": {param: param_grid[param][i] for param, i in best.items()}}
+	best_trials = [record for record in trials.results if record["params"] == best["params"]]
+		cols = ["loss", "best_iter", "time"] if "early_stopping_rounds" in fit_params else ["loss", "time"]
+	for col in cols:
+		best.update({col: np.array([record[col] for record in best_trials]).mean()})
 	results = {param: [record["params"][param] for record in trials.results] for param in param_list}
-	results.update({col: [np.round(record[col], 3) for record in trials.results] for col in ["loss", "time"]})
-	cols = param_list + ["loss", "time"]
+	results.update({col: [np.round(record[col], 3) for record in trials.results] for col in cols)
+	cols = param_list + cols
 	results_df = pd.DataFrame.from_dict(results)[cols]
 	times = {"mean_time": np.mean(results["time"]), "total_time": time.time()-time_0}
-	args = {"model": model.__name__, "year": year, "cv": cv, "max_evals": max_evals, "n_cv_jobs": n_cv_jobs}
+	args = {"model": model.__name__, "year": year, "cv": cv, "max_evals": max_evals, "n_cv_jobs": n_cv_jobs, "pca": pca}
 	print("Saving results\n---\n")
 	results_df.to_csv(out+"/results.csv", index=False)
 	save_json(trials.results, out+"/results.json")
@@ -96,7 +100,7 @@ def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, ma
 	save_json(times, out+"/times.json")
 
 
-def model_run(model, year, init_params, fit_params={}, save_model=False, out=None):
+def model_run(model, year, init_params, fit_params={}, save_model=False, pca=pca, out=None):
 	print("\n---\nCalling model_run on year ", year, " data")
 	time_0 = time.time()
 	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
@@ -104,7 +108,7 @@ def model_run(model, year, init_params, fit_params={}, save_model=False, out=Non
 	out = out + "/" + str(year)
 	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	print("Loading training data")
-	x_train, y_train = load_train(year)
+	x_train, y_train = load_train(year, pca=pca)
 	estimator = model(**init_params)
 	print("Training")
 	estimator.fit(x_train, y_train, **fit_params)
@@ -114,9 +118,13 @@ def model_run(model, year, init_params, fit_params={}, save_model=False, out=Non
 		print("Saving model")
 		joblib.dump(estimator, out+"/model.jl")
 	print("Loading test data")
-	x_test = load_test(year)
-	train_columns = load_train_columns(year)
-	month_col_index = train_columns.index("month")
+	x_test = load_test(year, pca=pca)
+	if pca:
+		x_test, update = x_test
+		train_columns = ["pc"+str(i) for i in range(1, x_train.shape[1]+1)]
+	else:
+		train_columns = load_train_columns(year)
+		month_col_index = train_columns.index("month")
 	print("Loading submission")
 	if year == 2016:
 		sub = pd.read_csv("data/sample_submission.csv")
@@ -126,7 +134,10 @@ def model_run(model, year, init_params, fit_params={}, save_model=False, out=Non
 	print("Predicting")
 	for month in [10, 11, 12]:
 		print("\tmonth = ", month)
-		x_test[:,month_col_index] = month
+		if pca:
+			x_test = x_test + update
+		else:
+			x_test[:,month_col_index] = month
 		sub[str(year)+str(month)] = estimator.predict(x_test)
 	time_2 = time.time()
 	print("Saving results\n---\n")
@@ -135,7 +146,7 @@ def model_run(model, year, init_params, fit_params={}, save_model=False, out=Non
 	importances.sort_values(by="importance", axis=0, ascending=False, inplace=True)
 	importances.to_csv(out+"/importances.csv", index=False)
 	times = {"pred_time": time_2-time_1, "total_time": time.time()-time_0}
-	args = {"model": model.__name__, "year": year}
+	args = {"model": model.__name__, "year": year, "pca": pca}
 	fit_params.pop("callbacks", None)
 	save_json(init_params, out+"/init_params.json")
 	save_json(fit_params, out+"/fit_params.json")

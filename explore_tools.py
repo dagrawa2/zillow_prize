@@ -65,7 +65,7 @@ def pca(year, n_components=1, out=None):
 	print("Projecting training data")
 	x_train = x_train.dot(P)
 	print("Saving projected training data")
-	np.save("preprocessed/x_train_"+str(year)+"_pca_dim"+str(n_components)+".npy", x_train)
+	np.save("preprocessed/x_train_pca_"+str(year).npy", x_train)
 	del x_train; gc.collect()
 	del V; gc.collect()
 	print("Loading test data")
@@ -75,7 +75,14 @@ def pca(year, n_components=1, out=None):
 	print("Projecting test data")
 	x_test = x_test.dot(P)
 	print("Saving projected test data")
-	np.save("preprocessed/x_test_"+str(year)+"_pca_dim"+str(n_components)+".npy", x_test)
+	np.save("preprocessed/x_test_pca_"+str(year)+".npy", x_test)
+	print("Computing one-month update matrix for projected test data")
+	train_columns = load_train_columns(year)
+	i = train_columns.index("month") if year > 0 else 0
+	update = P[i]/std[0,i]
+	update = update.reshape((1, -1))
+	print("Saving update matrix")
+	np.save("preprocessed/x_train_pca_update_"+str(year)+".npy", update)
 
 def corrs(year, absolute=False, out=None):
 	if year == 0:
@@ -264,3 +271,33 @@ def plot_corrs(year, out=None):
 	plt.ylabel("Feature 2 correlation")
 	print("Saving plot")
 	plt.savefig(out+"/plots/corrs_color.png", bbox_inches='tight')
+
+
+def fraction_missing(year, out=None):
+	print("\n---\nCalling fraction_missing on ", year, " data")
+#	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	out = out + "/" + str(year)
+#	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	print("Loading property data")
+	property_data = pd.read_csv("data/properties_"+str(year)+".csv", usecols=["parcelid", "regionidcity", "regionidcounty", "regionidzip", "regionidneighborhood", "latitude", "longitude"])
+	print("Computing fraction missing")
+	miss = property_data.drop("parcelid", axis=1).isnull().mean().sort_values(ascending=False)
+	miss = pd.DataFrame({"feature": miss.index, "fraction_missing": miss.values})[["feature", "fraction_missing"]]
+	print("Saving results\n---\n")
+	miss.to_csv(out+"/miss.csv", index=False)
+
+def plot_fraction_missing(year, n_features=None, out=None):
+	print("\n---\nCalling plot_fraction_missing on ", year, " data")
+#	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+	out = out + "/" + str(year)
+#	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
+#	os.system("if [ ! -d "+out+"/plots ]; then mkdir "+out+"/plots; fi")
+	print("Plotting")
+	miss = pd.read_csv(out+"/miss.csv", nrows=n_features)
+	miss = pd.Series(miss["fraction_missing"], index=miss["feature"])
+	plt.figure() # figsize=(8, 6))
+#	plt.subplots_adjust(left=.2, right=0.95, bottom=0.15, top=0.95)
+	miss.plot(kind="barh")
+	plt.title("Fraction of values missing for each feature in "+str(year))
+	print("Saving plot\n---\n")
+	plt.savefig(out+"/plots/miss.png", bbox_inches='tight')
