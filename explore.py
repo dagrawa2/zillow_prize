@@ -7,7 +7,6 @@ out = "results/explore"
 for year in [2016, 2017]:
 	et.fraction_missing(year, out=out)
 	et.explained_variance_ratio(year, out=out)
-#	et.pca(year, n_components=25, out=out)
 	et.corrs(year, absolute=False, out=out)
 	et.corrs(year, absolute=True, out=out)
 
@@ -15,7 +14,7 @@ for year in [2016, 2017]:
 	et.plot_evr(year, max_k=10, out=out)
 	et.plot_cross_sections(year, absolute=False, out=out)
 	et.plot_cross_sections(year, absolute=True, out=out)
-et.plot_corrs(year, out=out)
+	et.plot_corrs(year, out=out)
 	et.plot_transactions_per_month(year, out=out)
 
 print("Done")

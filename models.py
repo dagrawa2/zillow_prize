@@ -74,7 +74,9 @@ def model_hyperopt(model, year, init_params, param_grid, fit_params={}, cv=2, ma
 		loss = loss.mean()
 		time_elapsed = time.time()-time_start
 		if verbose > 0: print(". . .  loss=", np.round(loss, 3), "  time=", np.round(time_elapsed, 3))
-		return {"params": params, "loss": loss, "status": STATUS_OK, "best_iter": best_iter, "time": time_elapsed}
+		if "early_stopping_rounds" in fit_params:
+			return {"params": params, "loss": loss, "status": STATUS_OK, "best_iter": best_iter, "time": time_elapsed}
+		return {"params": params, "loss": loss, "status": STATUS_OK, "time": time_elapsed}
 	print("Optimizing hyperparameters")
 	space = {key: hp.choice(key, val) for key, val in param_grid.items()}
 	trials = Trials()
