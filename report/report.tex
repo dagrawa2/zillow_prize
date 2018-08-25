@@ -1,0 +1,244 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, graphicx}
+
+\title{Predicting the error in house sale price estimates by Zillow}
+\author{Devanshu Agrawal}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Introduction and problem statement}
+
+\section{Data exploration and preprocessing}
+
+We were provided with four data sets: properties\_2016, transactions\_2016, properties\_2017, and transactions\_2017. We will discuss properties\_2016 and properties\_2017 first. The set properties\_2016 contains *** properties along with 58 features including location, total lot area, number of rooms, etc. The set properties\_2017 contains the same *** properties and 58 features but includes information updated to 2017. Both data sets are missing a significant fraction of their values, and many features are redundant. We therefore proceed to discuss all 58 features in some detail and describe which features we decided to discard and what strategies we employed to impute missing values. Note that the discussion is very similar for both properties\_2016 and properties\_2017. We therefore discuss only properties\_2016 for brevity.
+
+\subsection{Preprocessing properties data}
+
+We start by computing the fraction of missing values in each of the 58 features in properties_2016 (see Table \ref{table-miss}). All features have some number of missing values, and many features are missing over 99\% of their values. We found that there are primarily two types of missing values:
+\begin{enumerate}
+\item Some values are missing to imply a null value such as a pool size of $0$ when a property has no pools.
+\item Other values are missing for unknown reasons.
+We now proceed to go through the features one-by-one and describe our methods of imputation.
+
+Consider the features ``yearbuilt'', ``architecturalstyletypeid'', ``buildingclasstypeid'', ``typeconstructiontypeid'', ``finishedsquarefeet13'', ``decktypeid'', ``storytypeid'', and ``numberofstories''. We imputed ``yearbuilt'' with its mode. It appears that the value of ``decktypeid'' is either 66 or is missing. We therefore replace 66 with $1$ as in ``deck is present'' and impute missing values with $0$ as in ``no deck''. Missing values of ``numberofstories'' probably correspond to properties with only one story; we impute this feature accordingly. All other features listed above are missing over 99\% of their values, and it is not obvious how these missing values could be imputed. We therefore drop these remaining features.
+
+Consider the features ``unitcnt'', ``buildingtypeid'', ``roomcnt'', and ``bedroomcnt''. We assume that missing values of ``unitcnt'' correspond to $1$, and we impute accordingly. We impute the other three features with their respective modes.
+
+The features ``regionidcity'', ``regionidcounty'', ``regionidzip'', ``regionidneighborhood'', ``latitude'', and ``longitude'' describe the location of a property. We found that whenever ``latitude'' or ``longitude'' is missing, then all other location features are missing as well. We imputed ``latitude'' and ``longitude'' with their modes; we did not use mean or median as these could result in coordinates that correspond to a non-residential area. We then used the python package ``uszipcode'' to look up all missing zipcodes based on the now known coordinates. To impute missing counties, we took the following strategy: We first observed that ``regionidcounty'' contained three counties, and we assumed that each missing county was one of these three. Then for each property with missing county, we found another property in the data with the same zipcode but with known county; we could then impute the county of the former property with that of the latter. Fortunately, all zipcodes had at least one property with known county. We took a similar approach to impute missing values of ``regionidcity''. But we found one zipcode in the data -- 97331 -- for which all properties had missing city information. We used uszipcode to find that the city corresponding to zipcode 97331 is Corvallis, OR. Unfortunately, we could not find the Zillow city ID for Corvallis. Since the City ID is somewhat arbitrary anyways, we decided to impute the missing city ID with the floored mean of all other IDs in ``regionidcity''; we made sure that the imputed value did not already exist in the data. Finally, we were unable to impute ``regionidneighborhood'' as uszipcode cannot return the Zillow ID of a neighborhood. Since over 60\% of ``regionidneighborhood'' is missing anyway, we decided to drop this feature.
+
+The features ``poolcnt'', ``poolsizzesum'', ``hashottuborspa'', ``pooltypeid2'', ``pooltypeid7'', and ``pooltypeid10'' pertain to information about pools. We first dropped ``pooltypeid10'' as it is identical to ``hashottuborspa''. The features ``hashottuborspace'', ``pooltypeid2'', and ``pooltypeid7'' are binary with either a value of $1$ (or ``True'') or missing a value. We therefore converted all ``True'' entries to $1$ and imputed missing values in these features with $0$ (as in ``False''). Similarly, we assumed that all missing values in ``poolcnt'' correspond to zero pools and imputed accordingly. We also assumed that for properties with no pools, missing values of ``poolsizesum'' indicate a pool size of $0$; we imputed these accordingly. For properties that do have a pool, we imputed missing values of ``poolsizesum'' with the median of all other pool sizes.
+
+The features ``bathroomcnt'', ``calculatedbathnbr'', ``fullbathcnt'', and ``threequarterbathnbr'' pertain to bathroom information. We found that the following relationship holds:
+\[ (\mbox{calculatedbathnbr}) = (\mbox{fullbathcnt}) + 0.5(\mbox{threequarterbathnbThis suggests that the three-uarter bathrooms are in fact half bathrooms. Assuming this relationship holds even when missing values are present, we deduced that the missing values of ``threequarterbathnbr'' correspond to properties with no three-quarter bathrooms; we therefore imputed these missing values with $0$. Due to the colinearity described by the above relationship, we also decided to drop ``fullbathcnt''. We found also that ``bathroomcnt'' and ``calculatedbathnbr'' are equal whenever both values are available for a property. Since ``calculatedbathnbr'' has more missing values, we dropped it and kept ``bathroomcnt''.
+
+The features ``garagecarcnt'' and ``garagetotalsqft'' give garage information. Missing values of ``garagecarcnt'' appear to correspond to properties with no garages; we imputed these with $0$. For these same properties with no garages, ``garagetotalsqft'' is also obviously missing; we imputed these values with $0$ as well.
+
+The features ``finishedsquarefeet6'', ``finishedsquarefeet15'', ``finishedfloor1squarefeet'', ``finishedsquarefeet50'', ``finishedsquarefeet12'', ``calculatedfinishedsquarefeet'' provide information about finished area on a property. The features ``finishedsquarefeet15'', ``finishedsquarefeet12'', and ``calculatedfinishedsquarefeet'' appear identical; at the very least, we confirmed their colinearity by finding their pairwise Pearson correlations to be $1$. We therefore dropped ``finishedsquarefeet12'' and ``finishedsquarefeet15''. It is unclear what ``finishedsquarefeet6'' measures. Moreover, it is missing over 99\% of its values, and whenever a value is provided, it is identical to ``calculatedfinishedsquarefeet''. We hence drop ``finishedsquarefeet6'' as well. The features ``finishedfloor1squarefeet'' and ``finishedsqquarefeet50'' appear identical, and so we dropped the former. We impute the missing values of ``calculatedfinishedsquarefeet'' with the mean of its values. The feature ``finishedsquarefeet550'' gives the area of the first floor. For properties with one story, ``finishedsquarefeet550'' should be equal to the total finished area ``calculatedfinishedsquarefeet''. Therefore, we first observe that the missing values of ``numberofstories'' indicate properties with one story, and we impute these accordingly. Then for properties with one story, we impute ``finishedsquarefeet50'' with ``calculatedfinishedsquarefeet''. Finally, we impute all remaining missing values of ``finishedsquarefeet50'' with the mean of its values.
+
+The features ``airconditioningtypeid'' and ``heatingorsystemtypeid'' describe the AC and heating units on the property. It appears that values are not entered whenever there is no AC or no heating unit. We therefore impute ``airconditioningtypeid'' with 5, which is the ID corresponding to ``None'', and similarly impute ``heatingorsystemtypeid'' with 13, which is the ID for ``None''.
+
+The features ``fireplaceflag'' and ``fireplacecnt'' describe the presence and number of fireplaces on a property. We convert all ``True'' and ``False'' entires in ``fireplaceflag'' to $1$ and $0$ respectively. For properties with a fireplace (``fireplaceflag'' is $1$), we impute missing values of ``fireplacecnt'' with the median of all positive fireplace counts. For properties with a fireplace (``fireplaceflag'' is $0$), we impute ``fireplacecnt'' with $0$. Finally, we impute missing values of ``fireplaceflag'' to $0$ if the corresponding ``fireplacecnt'' is $0$ and impute to $1$ otherwise.
+
+The features ``landtaxvaluedollarcnt'', ``structuretaxvaluedollarcnt'', ``taxvaluedollarcnt'', ``taxamount'', ``taxdelinquencyflag'', ``taxdelinquencyyear'', and ``assessmentyear'' pertain to taxes and tax delinquency. We interpret missing values in ``landtaxvaluedollarcnt'' as indicating that the property has no land outside the structure-- e.g., an apartment in a large building. We interpret missing values in ``structuretaxvaluedollarcnt'' as indicating that the property has no structure-- i.e., an empty lot. We therefore impute the missing values in these two features with $0$. We impute the missing values in ``taxvaluedollarcnt'' simply with its mean. Instead of imputing ``taxamount'', we form a new feature ``taxpercentage'' obtained as the ratio of ``taxamount'' and ``taxvaluedollarcnt''. We then drop ``taxamount'' and impute missing values in ``taxpercentage'' with its mean. The feature ``taxdelinquencyflag'' appears to be filled only when the flag is present. We therefore impute missing values with $0$ and convert all affirmative values to $1$. Since over 98\% of ``taxdelinquencyyear'' is missing, then we drop it. We imputed the missing values of ``assessmentyear'' with its mode.
+
+The features ``lotsizesquarefeet'', ``yardbuildingsqft17'', ``yardbuildingsqft26'', and ``basementsqft'' give additional information about property area. We impute missing values in ``lotsizesquarefeet'' with its mean. Missing values in the other features suggest an area of $0$, and so we impute these accordingly.
+
+Now we consider the features ``propertycountylandusecode'', ``propertylandusetypeid'', ``propertyzoningdesc'', ``fips'', ``rawcensustractandblock'', and ``censustractandblock''. The features ``propertycountylandusecode'' and ``propertyzoningdesc'' have entries that cannot be converted to a numerical representation. One option would be to treat these as categorical variables. But ``propertycountylandusecode'' and ``propertyzoningdesc'' have 240 and 5638 distinct values respectively; suchlarge numbers of categories could be deterimental to our model. So instead, we decided to drop these two features. We imputed ``propertylandusetypeid'' with its mode. We found the features ``fips'', ``rawcensustractandblock'', and ``censustractandblock'' to have pairwise Pearson correlation very close to $1$. We therefore decided to drop the latter*** two.
+
+***
+
+This completes the preprocessing of properties\_2016. We refer to this preprocessed properties data set as properties\_2016\_preprocessed. The set properties\_2016\_preprocessed has 39 features.
+
+\subsection{Building the training and test sets}
+
+Now we turn to the data set transactions\_2016. This data set contains the subset of properties in properties\_2016\_preprocessed that were sold in 2016. The data set contains *** properties but only *** unique properties, suggesting that some properties were sold more than once in 2016. For each property in transactions\_2016, two features are recorded-- the transaction date and the log-error between the actual price for which the property was sold and the Zestimate. The data has no missing values. We parsed the transaction dates and kept only the month while discarding year and day. To gain some intuition, we plotted the number of transactions over month (see Figure \ref{fig-month}). Most transactions occur during the summer. There are notably fewer transactions in October, November, and December; this is in part because Kaggle reserved a subset of transactions in these months to form the test set on which our predictions are to be evaluated.
+
+\begin{figure}
+\centering
+\includegraphics[width=3in]{../results/explore/2016/plots/transactions.png}
+\caption{\label{fig-month} Number of transactions in each month of 2016 as provided in the training set. Transactions are fewer in October, November, and December since a fraction of these are reserved for the test set.}
+\end{figure}
+
+We formed the training set for our regression models as follows: We took the subset of properties from properties\_2016_preprocessed that were also listed in transactions\_2016; thus, we have *** properties each with 38 features. We then augmented this data set with a new feature-- month, which we obtained from transactions\_2016. We observed that all properties in this set have an ``assessmentyear'' of 2015; the feature ``assessmentyear'' therefore provides no useful information for training, and hence we dropped this feature. We refer to the resulting data set as x\_train\_2016, which has *** properties and 39 features. We then take the properties in transactions\_2016 with the log-error feature from y\_train\_2016. The data (x\_train\_2016, y\_train\_2016) is then our training set for predicting log-error for each property in 2016.
+
+The challenge is to predict log-error for all properties in properties\_2016\_preprocessed. We therefore build the test set as follows: We first take properties\_2016\_preprocessed and augment it with a ``month'' feature whose value is set to 10 (as in October); we call this augmented set x_\test\_2016\_oct. We construct x\_test\_2016\_nov and x\_test\_2016\_dec by setting the ``month'' feature to 11 and 12 respectively. Then to make predictions for October 2016, we apply our trained model on x_\test\_oct; we do similar for November and December. We let x\_test\_2016 be shorthand for the concatenated set (x\_test\_2016\_oct, x_\test\_2016\_nov, x_\test\_2016\_dec).
+
+We build the training set (x_\train\_2017, y\_train\_2017) and test set x\_test\_2017 for 2017 in exactly the same way as we did for 2016.
+
+\subsection{Correlations}
+
+as further exploration,
+we plotted the pearson and pearson correlations between each feature and logerror as well as between all features
+we found that the features correlate poorly with logerror
+since the spearman correlation is also low, then this suggests that the dependence of logerror on each feature is more complex than a monotonic function;
+either the relationship is not monotone or there is significant noise
+in contrast, many features correlate with oneanother strongly
+pool
+we did not remove this as we know that this relationship is not linear
+also interesting that many features correlate negatively to county
+only three counties
+but still the county is a good predictor of other features
+
+\section{Dimensionality reduction}
+
+we were interested in seeing if compressing the data down to its intrinsic linear dimension could help provide a more robust model
+to this end, we first gathered the singular vlaues of the training data dn use them to find the fraction of variance in the data explained by the first k principal components
+(show figure)
+the first 25 components account for over 95% of the variance in the data
+we projected the training data onto its first 25 principle components and stored this compressed version
+
+\begin{figure}
+\centering
+\includegraphics[width=3in]{../results/explore/2016/plots/evr.png}
+\caption{\label{fig-evr} Fraction of variance explained by the first $k$ principal components of x\_train\_2016. Only the first *** principal components are shown.}
+\end{figure}
+
+\section{Regression methods}
+
+our task is to predict the house price logerror for all properties in property data 2016 and property data 2017 given the training sets. we have to make predictions for the months of october, november, and december.
+we do this as follows--
+we augment the test sets with a "month" feature set with the value of 10 for october
+we then predict
+then we change the month value to 11 and predict
+we repeat this finally for december
+
+we try several models for regression
+for most of our models, we train on x_train_2016 and predict on test 2016, and then train a separate model on x_train_2017 and predict on test 2017;
+i.e., we treat 2016 and 2017 as distinct tasks
+we will see, however, that we do often transfer hyperparameters of one odel trained on 2016 to a model meant to be used on 2017
+
+for our actual model, we focus on ensemble and gradient-boosted tree models
+in particular, random forests (RFs) and gradient-boosted decision trees or gradient-boosted machines (GBMs)
+
+tree models are power regression models but have many parameters that can be tuned to handle overfitting
+tree models have also been shown to be very effective in kaggle competitions
+
+an RF is an ensemble of decision tree base learners
+each base learner is trained on a random subset of features as well as on a random bootstrapped sample of the training data
+this discourages dependency between the base learners and helps to overcome overfitting
+preidction of the RF is then taken to be the average prediction of the ensemble
+
+a GBM starts with an initial model
+it then improves upon the model by fitting a second model to the gradient of the objective and then adding that model to the first
+i.e., we perform gradient descent in function space
+in the case of gradient-boosted tree odels,
+we are performing gradient descent in the sapce of trees
+we end up with a weighted sum of dependent tree models
+GBMs are more prone to overfitting since the base trees are not independent
+the advantage is that they are faster to train and evaluate
+
+RFs and GBMs have several hyperparameters that can be adjusted. we were interested in performing hyperparameter optimization to find the best models
+the key hyperparameters to focus on for GBMs are--
+***
+and the key hyperparameters for RFs are--
+***
+
+we used the *** algorithm to do HO.
+we assume a prior distribution over hyperspace
+then we train models and evaluate some loss
+based on the losses and the prior, the algorithm computes a posterior distribution over hyperspace
+this guides the selection of the next round of models to be trained
+this procedure is iterated until either a max number of evaluations is reached or until the distribution converges to a delta over hyperparmeter combinations all having equal maximal loss
+
+we implemented our models and HO using the python API for LightGBM, sci-kit learn, and hyperopt
+lightgbm offers both rf and gbm models
+we used the sklearn interface to lightgbm
+we used the cross validation methods of sklearn to construct a loss that gives the mean absolute error in prediction over three stratified folds of the training set
+we then passed this construct into hyperopt for HO
+
+\section{Experimental results}
+
+We implemented GBM and RF models for various hyperparameter combinations and under various training conditions to obtain the best private LB. We present the results of seven such models. Table \ref{table-param} summarizes the hyperparameters used for each model. Some of the models have additional differences besides hyperparameters; therefore, we proceed to describe each model in more detail.
+
+\begin{table}
+\centering
+\caption{\label{table-params} Set of hyperparameters used in each model. GBM1 is the only model that uses different hyperparameters on the 2016 and 2017 data sets.}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|} \hline
+\quad & n_estimators & num_leaves & feature_fraction & bagging_fraction & bagging_freq & learning_rate & lambda_l1 & lambda_l2 \\ \hline
+GBM0 & 200 & 60 & 0.5 & 1 & 0 & 0.002 & 0 & 0 \\
+GBM1 (2016) & 500 & 128 & 0.4 & 1 & 0 & 0.003 & 0 & 0 \\
+GBM1 (2017) & 173 & 128 & 0.3 & 1 & 0 & 0.01 & 0 & 0 \\
+GBM2 & 500 & 128 & 0.4 & 1 & 0 & 0.003 & 0 & 0 \\
+GBM3 & 500 & 128 & 0.4 & 1 & 0 & 0.003 & 0 & 0 \\
+GBM4 & 500 & 64 & 0.5 & 1 & 0 & 0.002 & 0 & 0 \\
+GBM5 & 500 & 64 & 0.5 & 0.8 & 10 & 0.002 & 0.001 & 0.01 \\
+RF1 & 200 & 128 & 0.32 & 0.5 & 1 & 0.002 & * & * \\
+\hline
+\end{tabular}
+\end{table}
+
+GBM0 is our base model that we borrowed from \cite{***}. It is fundamentally different from the other six models as it was trained on a data set that was preprocessed somewhat differently from than what we describe in Section \ref{section-***}. In particular, ``finishedsquarefeet15'', ``rawcensustractandblock'', and ``calculatedbathnbr'' are not dropped; ``threequarterbathnbr'', and ``regionidcity'', ``regionidcounty'' are dropped; and ``regionidzip'' was imputed with its mode. Moreover, the predictions of the model for 2016 trained on 2016 data were copied to obtain identical predictions for 2017. The public and private LBs of the model are listed in Table \ref{table-scores}.
+
+GBM1 is the first model that we trained on the preprocessed data as described in Section \ref{section-***}. We first performed hyperparameter optimization for two GBM models separately on the 2016 and 2017 training sets using the *** algorithm and 3-fold CV. Table \ref{table-ho} lists the hyperparameter grids that were used. We used the GBM optimized for 2016 to predict for 2016 and similarly for 2017. Table \ref{table-scores} lists the CV score of both models as well as the public and private LBs. The private LB is significantly worse than that of GBM0.
+
+GBM2 improves upon GBM1 by using the model with hyperparameters otpimized on 2016 training data to predict for both 2016 and 2017. To be clear, the 2016 predictions were not simply copied for 2017; rather, the model was to make separate predictions on the 2016 and 2017 test sets.
+
+GBM3 is identical to GBM2 but is applied to data that was compressed with PCA (see Section \ref{section-pca}). PCA led to a poorer private LB.
+
+GBM4 improves upon GBM2 by replacing the optimized hyperparameters with hand-picked ones. The hand-picked hyperparameters were selected to be close to the ones used in GBM0. As in GBM2, the same set of hyperparameters was used for both the 2016 and 2017 models.
+
+GBM5 improves upon GBM4 via reducing overfitting by bagging and $L_1$ and $L_2$ regularization. We took GBM4 and performed hyperparameter optimization on 2016 training data over bagging fraction, and the strengths of $L_1$ and $L_2$ regularization (see Table \ref{table-ho}). The *** algorithm and 3-fold CV were used. The optimized hyperparameters were then used for both the 2016 and 2017 models. The mean CV score is reported along with the public and private LBs (see Table \ref{table-scores}).
+
+\begin{table}
+\centering
+\caption{\label{table-ho} Hyperparameter grid that was searched during of hyperparameter optimization of each model.}
+\begin{tabular}{|c|c|c|} \hline
+Model & Parameters & Grid \\ \hline
+GBM1 & num_leaves, feature_fraction, learning_rate & $[32, 64, 128] \times [0.3, 0.4, 0.5, 0.6, 0.7] \times [0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009000000000000001, 0.01]$ \\
+GBM5 & bagging_fraction, lambda_l1, lambda_l2 & $[0.2, 0.4, 0.6, 0.8, 1] \times [0, 0.001, 0.01] \times [0, 0.001, 0.01]$ \\
+RF1 & n_estimators, num_leaves, feature_fraction, bagging_fraction & $[50, 100, 150, 200] \times [32, 64, 128] \times [0.8, 0.16, 0.32, 0.64] \times [0.2, 0.3, 0.4, 0.5]$ \\
+\hline
+\end{tabular}
+\end{table}
+
+Finally, RF2 is an RF with hyperparameters optimized on 2016 training data (see Table \ref{table-ho}). The same optimized hyperparameters were used in both 2016 and 2017 models. The CV score is reported along with the LBs (see Table \ref{table-score}). Out of all models trained on data preprocessed as described in Section \ref{section-***} (i.e., all models except GBM0), RF2 achieves the best private LB. It is worth noting, however, that the improved score by RF2 comes at a significant cost in computation time; during hyperparameter optimization for GBM1 and GBM5, each evaluation (for each hyperparameter combination) took about 5-7 seconds to run, but in contrast, each evaluation while optimizing RF2 took over 7 hours.
+
+\begin{table}
+\centering
+\caption{\label{table-scores} CV, public LB, and private LB scores for each model. The CV score is the mean of the validation over three folds. Since the hyperparameters of GBM1 were optimized separately for 2016 and 2017, then two CV scores are reported-- one for each year.}
+\begin{tabular}{|c|c|c|} \hline
+Model & CV & Public LB & Private LB \\ \hline
+GBM0 & \quad & 0.0651179 & 0.0759204 \\
+GBM1 & \begin{tabular}{@{}c@{}} 0.0679511\\ 0.0703069\end{tabular} & 0.0647788 & 0.0763565 \\
+GBM2 & \quad & 0.0647788 & 0.0762839 \\
+GBM3 & \quad & 0.0648313 & 0.0763703 \\
+GBM4 & \quad & 0.0647504 & 0.0761217 \\
+GBM5 & 0.0679622 & 0.0647539 & 0.0761002 \\
+RF1 & 0.0680366 & 0.0647544 & 0.0760869 \\
+\hline
+\end{tabular}
+\end{table}
+
+***
+
+\begin{table}
+\centering
+\caption{\label{table-importances} Importance of each feature as determined by the GBM5 and RF1 models, where importance of a feature is calculated as the sum of decreases in loss over all splits of the feature in the GBM or RF model. Features are sorted with descending importance.}
+\begin{tabular}{|c|c|c|c|c|} \hline
+Rank & Feature (GBM5) & Importance (GBM5) & Feature (RF1) & Importance (RF1) \\ \hline
+1 & taxpercentage & 1628.243 & taxpercentage & 426.52 \\
+2 & yearbuilt & 699.807 & calculatedfinishedsquarefeet & 219.81 \\
+3 & calculatedfinishedsquarefeet & 685.086 & finishedsquarefeet50 & 210.467 \\
+4 & structuretaxvaluedollarcnt & 671.976 & latitude & 151.716 \\
+5 & regionidzip & 628.209 & structuretaxvaluedollarcnt & 149.174 \\
+6 & taxvaluedollarcnt & 612.219 & landtaxvaluedollarcnt & 148.815 \\
+7 & finishedsquarefeet50 & 573.487 & yearbuilt & 147.239 \\
+8 & landtaxvaluedollarcnt & 524.328 & taxvaluedollarcnt & 142.675 \\
+9 & lotsizesquarefeet & 477.144 & longitude & 132.993 \\
+10 & latitude & 471.18 & regionidzip & 109.769 \\
+\vdots & \vdots \\
+35 & fireplacecnt & 2.399 & yardbuildingsqft17 & 0.531 \\
+36 & yardbuildingsqft17 & 1.638 & yardbuildingsqft26 & 0.0 \\
+37 & decktypeid & 0.0 & decktypeid & 0.0 \\
+38 & yardbuildingsqft26 & 0.0 & pooltypeid2 & 0.0 \\
+39 & basementsqft & 0.0 & basementsqft & 0.0 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Conclusions}
+
+***
