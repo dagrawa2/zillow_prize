@@ -1,0 +1,564 @@
+\documentclass{beamer}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{graphicx}
+%\usepackage{pgfplots, pgfplotstable}
+\mode<presentation>
+{\usetheme{boxes}}
+\setbeamertemplate{frametitle}[default][center] 
+
+\usepackage{lmodern, exscale}
+
+\usepackage{xcolor}
+
+%\newcommand{\RR}{\mathbb{R}}
+%\newcommand{\eps}{\epsilon}
+%\newcommand{\lmat}{\begin{bmatrix}}
+%\newcommand{\rmat}{\end{bmatrix}}
+%\newcommand{\argmin}{\operatorname{argmin}}
+%\newcommand{\fnn}{f_{\mbox{NN}}}
+%\newcommand{\tilw}{\tilde{w}}
+%\newcommand{\tilW}{\tilde{W}}
+
+\title{Zillow prize: Predicting the error in Zestimates}
+\author{Devanshu Agrawal}
+\date{September 17, 2018}
+
+\begin{document}
+
+\begin{frame}
+\titlepage
+\end{frame}
+
+\begin{frame}
+\frametitle{Introduction}
+\begin{itemize}
+\item Zillow: Online real-estate database company.
+\item Zestimate: Estimated home value based on machine learning and statistical models.
+\item Zillow Prize: 2017 Kaggle competition to predict the log-error in Zestimates:
+\[ \mbox{log-error} = \log(\mbox{Zestimate}) - \log(\mbox{sale price}). \]
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Data Files}
+\begin{itemize}
+\item Data of homes from three counties in southern California.
+\begin{itemize}
+\item properties\_2016.csv
+\item transactions\_2016.csv
+\item properties\_2017.csv
+\item transactions\_2017.csv
+\end{itemize}
+\item Will focus the discussion on 2016 data.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Properties Data}
+\begin{itemize}
+\item Contains 2985217 properties with 57 features not including ``parcelid''.
+\end{itemize}
+\begin{center}
+\footnotesize
+\begin{tabular}{|c|c|c|c|c|c|c|} \hline
+parcelid & airconditioning & architectural & basement & bathroom & bedroom & $\cdots$ \\ \hline
+\quad & typeid & styletypeid & sqft & cnt & cnt & \quad \\ \hline
+$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\ddots$ \\
+13037353 & 1.0 & nan & nan & 3.0 & 4.0 & $\cdots$ \\
+13037414 & 1.0 & nan & nan & 2.0 & 3.0 & $\cdots$ \\
+13037460 & 1.0 & nan & nan & 4.0 & 5.0 & $\cdots$ \\
+13037644 & nan & nan & nan & 2.0 & 2.0 & $\cdots$ \\
+13037744 & nan & nan & nan & 3.0 & 4.0 & $\cdots$ \\
+$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ & $\ddots$ \\
+\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Transactions Data}
+\begin{itemize}
+\item Contains 90275 transactions but only 90150 unique properties.
+\end{itemize}
+\begin{center}
+\begin{tabular}{|c|c|c|} \hline
+parcelid & logerror & transactiondate \\ \hline
+$\vdots$ & $\vdots$ & $\vdots$ \\
+14660592 & -0.0151 & 2016-01-07 \\
+14129273 & 0.0334 & 2016-01-07 \\
+11078035 & 0.002 & 2016-01-07 \\
+12058667 & 0.004 & 2016-01-07 \\
+12660997 & 0.0392 & 2016-01-07 \\
+$\vdots$ & $\vdots$ & $\vdots$ \\
+\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{The Problem}
+\begin{itemize}
+\item Build a model that predicts the log-error in Zestimate for all 2985217 properties for months October, November, and December in years 2016 and 2017.
+\item Zillow has withheld the log-errors for some transactions in October, November, and December; predictions for these transactions are used to score participants.
+\begin{itemize}
+\item 2016 predictions determine public leaderboard (LB) and 2017 predictions determine private LB.
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Outline of the Talk}
+\begin{itemize}
+\item Data imputation and exploration.
+\item Dimensionality reduction.
+\item Model descriptions.
+\item Results.
+\item Discussion.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Missing Values}
+\begin{itemize}
+\item Percentage of values missing for each feature.
+\end{itemize}
+\begin{center}
+\footnotesize
+\begin{tabular}{|c|c|c|} \hline
+\quad & Feature & Fraction missing \\ \hline
+1 & storytypeid & 0.9995 \\
+2 & basementsqft & 0.9995 \\
+3 & yardbuildingsqft26 & 0.9991 \\
+%4 & fireplaceflag & 0.9983 \\
+%5 & architecturalstyletypeid & 0.998 \\
+%6 & typeconstructiontypeid & 0.9977 \\
+%7 & finishedsquarefeet13 & 0.9974 \\
+%8 & buildingclasstypeid & 0.9957 \\
+%9 & decktypeid & 0.9943 \\
+%10 & finishedsquarefeet6 & 0.9926 \\
+$\vdots$ & $\vdots$ & $\vdots$ \\
+%26 & airconditioningtypeid & 0.7282 \\
+%27 & garagecarcnt & 0.7041 \\
+28 & garagetotalsqft & 0.7041 \\
+29 & regionidneighborhood & 0.6126 \\
+30 & heatingorsystemtypeid & 0.3949 \\
+$\vdots$ & $\vdots$ & $\vdots$ \\
+%53 & fips & 0.0038 \\
+%54 & regionidcounty & 0.0038 \\
+55 & latitude & 0.0038 \\
+56 & longitude & 0.0038 \\
+57 & rawcensustractandblock & 0.0038 \\
+\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Imputation Strategy}
+\begin{itemize}
+\item Group features into rough categories: Bathroom features, finished area features, tax-related features, etc.
+\item Go through each group and see if some features can be used to help impute other features.
+\item Two kinds of missing values:
+\begin{itemize}
+\item Missing value indicates some default null value.
+\item Value is missing for unknown reason.
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Location Features}
+\begin{itemize}
+\item Includes ``regionidcity'', ``regionidcounty'', ``regionidzip'', ``regionidneighborhood'', ``latitude'', and ``longitude''.
+\item If ``latitude'' or ``longitude'' is missing, then all other location features are missing.
+\item Imputed ``latitude'' and ``longitude'' with their modes.
+\begin{itemize}
+\item Mean or median would not have guaranteed coordinates in residential area.
+\end{itemize}
+\item Retreived missing zipcodes using coordinates and the ``uszipcode'' python module.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Location Features (cont.)}
+\begin{itemize}
+\item Properties with the same zipcode should be in the same county.
+\end{itemize}
+\begin{center}
+\begin{tabular}{|c|c|c|} \hline
+Property & Zipcode & County \\ \hline
+A & 96450 & 3101 \\
+B & 96450 & nan \\
+\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Location Features (cont.)}
+\begin{itemize}
+\item Imputed ``regionidcity'' with similar strategy as for ``regionidcounty''.
+\item All properties with zipcode 97331 were missing ``regionidcity''.
+\begin{itemize}
+\item Imputed final missing value of ``regionidcity'' with florred mean.
+\item Confirmed that imputed city index was unique.
+\end{itemize}
+\item Dropped ``regionidneighborhood'' since missing over 60\% of values and no strategy for imputing.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Bathroom Features}
+\begin{itemize}
+\item Includes ``bathroomcnt'', ``calculatedbathnbr'', ``fullbathcnt'', and ``threequarterbathnbr''.
+\item Identified multicolinearity:
+\[ (\mbox{calculatedbathnbr}) = (\mbox{fullbathcnt}) + 0.5(\mbox{threequarterbathnbr}). \]
+\begin{itemize}
+\item Three-qquarter bathrooms are actually half bathrooms.
+\item Used relationship to help impute missing values.
+\item Dropped ``fullbathcnt''.
+\end{itemize}
+\item Features ``bathroomcnt'' and ``calculatedbathnbr'' are equal whenever both values are known.
+\begin{itemize}
+\item Dropped ``calculatedbathnbr'' since  it had more missing values.
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Fireplace Features}
+\begin{itemize}
+\item Includes ``fireplaceflag'' and ``fireplacecnt''.
+\item In ``fireplaceflag'', convert ``true'' and ``false'' to $1$ and $0$ respectively.
+\item Impute ``fireplacecnt'' to $0$ if ``fireplaceflag'' is $0$ and to the median otherwise.
+\item Impute ``fireplaceflag'' to $1$ if ``fireplacecnt'' is positive and otherwise to $0$.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Final Training Set}
+\begin{itemize}
+\item Dropped a total of 19 features due to one of the following:
+\begin{itemize}
+\item Too many missing values or difficult to impute.
+\item Redundancy; another feature is identical.
+\item Multicolinearity; linear combination of other features.
+\item Provides little useful information.
+\end{itemize}
+\item Added ``month'' feature.
+\item Final training set has 39 features.
+\end{itemize}
+\end{frame}
+
+%\item Formed training set (X\_train\_2016, y\_train\_2016):
+%\begin{itemize}
+%\item X\_train\_2016: Augment transactions\_2016.csv with features from properties\_2016.csv, replace transaction date with month, and drop log-error.
+%\item y\_train\_2016: extract log-error from transactions\_2016.csv.
+%\end{itemize}
+%\end{itemize}
+%\end{frame}
+
+%%\begin{frame}
+%\frametitle{Final Training Set (cont.)}
+%\begin{itemize}
+%\item All properties in X\_train\_2016 have same value for ``taxassessmentyear''.
+%\item Dropped ``taxassessmentyear'' from X\_train\_2016.
+%\item (X\_train\_2016, y\_train\_2016) has 90275 training samples of dimension 39.
+%\item Prepared (X\_train\_2017, y\_train\_2017) similarly.
+%\end{itemize}
+%\end{frame}
+
+\begin{frame}
+\frametitle{Correlations with the Target}
+\begin{itemize}
+\item Poor correlation of each feature with log-error.
+\end{itemize}
+\begin{center}
+\includegraphics[width=3in]{../results/explore/2016/plots/corrs_with_y.png}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{A Cross-Section of Data}
+\begin{itemize}
+\item Noise likely due to variation of log-error with the other 38 features.
+\item Correlation gives poor measure of importance.
+\end{itemize}
+\begin{center}
+\includegraphics[width=3in]{../results/explore/2016/plots/cs-calculatedfinishedsquarefeet.png}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Alternative Approach to Correlations}
+\begin{itemize}
+\item Compute correlation between feature $A$ and target while holding all other features fixed (or restricted to small bin of values).
+\item Average resulting correlations over all slices of the other features.
+\end{itemize}
+\begin{center}
+\includegraphics[width=3in]{plots/alt.png}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Correlations between Features}
+\begin{center}
+\footnotesize
+\begin{tabular}{|c|c|c|c|} \hline
+\quad & Feature 1 & Feature 2 & Pearson \\ \hline
+1 & poolcnt & poolsizesum & 0.9966 \\
+2 & poolcnt & pooltypeid7 & 0.9579 \\
+3 & taxvaluedollarcnt & landtaxvaluedollarcnt & 0.9553 \\
+4 & poolsizesum & pooltypeid7 & 0.9549 \\
+5 & calculatedfinishedsquarefeet & finishedsquarefeet50 & 0.9405 \\
+6 & fireplacecnt & fireplaceflag & 0.919 \\
+7 & garagecarcnt & garagetotalsqft & 0.8398 \\
+%8 & structuretaxvaluedollarcnt & taxvaluedollarcnt & 0.8242 \\
+$\vdots$ & $\vdots$ & $\vdots$ & $\vdots$ \\
+737 & fips & regionidcounty & -0.6091 \\
+738 & regionidcounty & roomcnt & -0.6376 \\
+739 & garagetotalsqft & regionidcounty & -0.6695 \\
+740 & heatingorsystemtypeid & regionidcounty & -0.7861 \\
+741 & garagecarcnt & regionidcounty & -0.8538 \\
+\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Dimensionality Reduction}
+\begin{itemize}
+\item Prepared reduced data set in addition to original data set.
+\item Principal components analysis (PCA):
+\begin{itemize}
+\item Selected 25 principal components; explains 95\% of variance.
+\end{itemize}
+\end{itemize}
+\begin{center}
+\includegraphics[width=3in]{../results/explore/2016/plots/evr.png}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Regression Models}
+\begin{itemize}
+\item Algorithms:
+\begin{itemize}
+\item Random forest (RF).
+\item Gradient-boosted decision tree (GBDT).
+\end{itemize}
+\item Libraries:
+\begin{itemize}
+\item LightGBM.
+\item Sci-KitLearn.
+\item Hyperopt
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Random Forests}
+\begin{itemize}
+\item Want model that minimizes mean squared error:
+\[ \mbox{MSE} = \mbox{bias}^2 + \mbox{variance}. \]
+\item Bias, variance, and MSE are expectations over space of training sets (of given size).
+\item Many training sets are better than one.
+\item Can simulate many training sets through bootstrapped aggregation (bagging).
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Random Forests (cont.)}
+\begin{itemize}
+\item RF: Ensemble of decision trees.
+\item Each base learner trained on random boostrapped sample of data (bagging) and on random fraction of features.
+\item Prediction is average of all individual predictions.
+\item Ensemble reduces variance by giving better approximation to MSE.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Gradient-Boosted Decision Trees}
+\begin{itemize}
+\item Consider data $(X, y)$, loss $L(y, f)$, and decision tree $f_m$ fitted to data.
+\item Fit decision tree $h_m$ to gradient data $(X, \nabla_f L(y, f_m))$.
+\item Perform one step of gradient descent with line search and shrinkage to obtain boosted decision tree:
+\[ f_{m+1} = f_m - \alpha\gamma\cdot h_m. \]
+\item Separate line search parameter $\gamma_i$ for each leaf of $h_m$.
+%\item Component $\gamma_i$ of $\gamma$ is the fitted line search parameter for the $i$th leaf of $h_m$.
+\item $\alpha$ is the shrinkage hyperparameter (learning rate).
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Gradient-Boosted Decision Trees (cont.)}
+\begin{itemize}
+\item Boosting is iterative.
+\item Each base learner is fit to a random subsample of training data and on a random fraction of features.
+\begin{itemize}
+\item Analogous to stochastic gradient descent with dropout in neural networks.
+\item Helps to combat overfitting.
+\item Speeds up training.
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{LightGBM}
+\begin{itemize}
+\item Newer alternative to XGBoost for ensemble and gradient-boosted models.
+\item Faster and more efficient.
+\begin{itemize}
+\item During subsampling, training samples resulting in large gradients are kept.
+\item Trees are grown leaf-wise instead of level-wise.
+\begin{itemize}
+\item Leads to more complex trees that reduce loss more efficiently.
+\item Increases chances of overfitting.
+\end{itemize}
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Key Hyperparameters}
+\begin{itemize}
+\item Hyperparameters common to RFs and GBDTs:
+\begin{itemize}
+\item n\_estimators.
+\item num\_leaves.
+\item feature\_fraction.
+\item bagging\_fraction.
+\end{itemize}
+\item Additional hyperparameters for GBDTs:
+\begin{itemize}
+\item learning\_rate.
+\item lambda\_l1.
+\item lambda\_l2.
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Hyperparameter Optimization}
+\begin{itemize}
+\item Used 3-fold cross validation.
+\item Scored model with mean absolute error averaged over 3 test folds.
+\item Used the Tree-Structure Parzen Estimation (TPE) algorithm.
+\begin{itemize}
+\item Declare prior distribution over hyperspace.
+\item Sample hyperparameters and evaluate model with each sample.
+\item Use Bayes' Rule to obtain posterior distribution.
+\item Iterate.
+\end{itemize}
+\item Optimized ``n\_estimators'' for GBDT with early stopping.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Results}
+\begin{center}
+\footnotesize
+\begin{tabular}{|c|c|c|c|} \hline
+Model & Public LB & Private LB & Notes \\ \hline
+\textcolor{blue}{GBDT0} & \textcolor{blue}{0.0651179} & \textcolor{blue}{0.0759204} & \textcolor{blue}{baseline, very different} \\
+GBDT1 & 0.0647788 & 0.0763565 & separate HO on 2016, 2017 \\
+GBDT2 & 0.0647788 & 0.0762839 & transfer 2016 hyperparams to 2017 \\
+GBDT3 & 0.0648313 & 0.0763703 & PCA \\
+GBDT4 & 0.0647504 & 0.0761217 & hand-picked hyperparams \\
+GBDT5 & 0.0647539 & 0.0761002 & bagging, L\_1, L\_2 \\
+RF1 & 0.0647544 & 0.0760869 & very slow \\
+\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Remarks on Results}
+\begin{itemize}
+\item Baseline model achieves best private LB.
+\begin{itemize}
+\item Was meant only for testing code.
+\item Data preprocessed differently; fewer features dropped.
+\item 2016 predictions were copied to 2017.
+\end{itemize}
+\item PCA resulted in worse performance.
+\item Hypothesis: Reduced multicolinearity caused the model to underfit.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Decision Tree Toy Example}
+\begin{itemize}
+\item Consider binary classification problem.
+\item Decision boundary is $x+y=0$ with $x+y>0$ class $1$ and $x+y<0$ class $0$.
+\end{itemize}
+\begin{center}
+\includegraphics[width=3in]{plots/toy-1.png}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Decision Tree Toy Example (cont.)}
+\begin{itemize}
+\item Decision trees partition feature space with hyperplanes perpendicular to the coordinate axes.
+\item A very deep decision tree can estimate $x+y=0$ with a ``staircase''.
+\end{itemize}
+\begin{center}
+\includegraphics[width=3in]{plots/toy-2.png}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Decision Tree Toy Example (cont.)}
+\begin{itemize}
+\item Engineer a new feature $z = x+y$.
+\item Then $z=0$ is an optimal decision bounary and is perpendicular to the $z$-axis.
+\item Thus $z=0$ can be learned by a decision stump.
+\item Introduction of a colinear feature reduced tree complexity from infinite to minimal.
+\item Discarding features or performing PCA to reduce multicolinearity might cause tree-based models to underfit.
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{Feature Importances}
+\begin{itemize}
+\item Feature engineering should focus on most important features.
+\end{itemize}
+\begin{center}
+\footnotesize
+\begin{tabular}{|c|c|c|c|c|} \hline
+\quad & GBDT5 & RF1 & \\
+1 & taxpercentage & taxpercentage \\
+2 & yearbuilt & calculatedfinishedsquarefeet \\
+3 & calculatedfinishedsquarefeet & finishedsquarefeet50 \\
+4 & structuretaxvaluedollarcnt & latitude \\
+5 & regionidzip & structuretaxvaluedollarcnt \\
+6 & taxvaluedollarcnt & landtaxvaluedollarcnt \\
+7 & finishedsquarefeet50 & yearbuilt \\
+8 & landtaxvaluedollarcnt & taxvaluedollarcnt \\
+%9 & lotsizesquarefeet & longitude \\
+%10 & latitude & regionidzip \\
+$\vdots$ & $\vdots$ & $\vdots$ \\
+35 & fireplacecnt & yardbuildingsqft17 \\
+36 & yardbuildingsqft17 & yardbuildingsqft26 \\
+37 & decktypeid & decktypeid \\
+38 & yardbuildingsqft26 & pooltypeid2 \\
+39 & basementsqft & basementsqft \\
+\hline
+\end{tabular}
+\end{center}
+\end{frame}
+
+\begin{frame}
+\frametitle{Future Improvements}
+\begin{itemize}
+\item For tree-based models, discard features only if redundant, error-prone, or difficult to impute.
+\item Perform feature engineering.
+\item Perform more extensive HO.
+\item Specify categorical features.
+\item Consider the geometry of the data.
+\end{itemize}
+\end{frame}
+
+\end{document}
