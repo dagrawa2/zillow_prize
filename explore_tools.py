@@ -132,7 +132,7 @@ def corrs(year, absolute=False, out=None):
 	corrs_x_pearson_sorted.to_csv(out+"/corrs_x_pearson_sorted.csv", index=False)
 	corrs_x_spearman_sorted.to_csv(out+"/corrs_x_spearman_sorted.csv", index=False)
 
-def plot_evr(year, max_k=None, out=None):
+def plot_evr(year, max_k=None, threshold=None, out=None):
 	print("\n---\nCalling plot_ever on ", out, "/evr.csv")
 	os.system("if [ ! -d "+out+" ]; then mkdir "+out+"; fi")
 	out = out + "/" + str(year)
@@ -144,6 +144,8 @@ def plot_evr(year, max_k=None, out=None):
 	fig = plt.figure()
 	ax = fig.add_subplot(1,1,1)
 	ax.plot(data[:,0], data[:,1], color="black")
+	if threshold is not None:
+		ax.plot([0, data.shape[0]], [threshold, threshold], color="black", linestyle="dashed")
 	ax.set_title("Explained variance ratio for "+str(year)+"data")
 	ax.set_xlabel("Number of components")
 	ax.set_ylabel("Ratio")

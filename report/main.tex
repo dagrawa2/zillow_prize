@@ -17,6 +17,7 @@
 We were provided with four data sets: properties\_2016, transactions\_2016, properties\_2017, and transactions\_2017. We will discuss properties\_2016 and properties\_2017 first. The set properties\_2016 contains 2985217 properties along with 57 features that describe location, total lot area, number of rooms, etc. The set properties\_2017 contains the same 2985217 properties and 57 features but includes information updated to 2017. Both data sets are missing a significant fraction of their values, and many features are redundant. We therefore proceed to discuss all 57 features in some detail and describe which features we decided to discard and what strategies we employed to impute missing values. Note that the discussion is very similar for both properties\_2016 and properties\_2017. We therefore discuss only properties\_2016 for brevity. Note also that our preprocessing as described below borrows heavily from \cite{rtlatimer}.
 
 \subsection{Preprocessing properties data}
+\label{section-preprocess}
 
 We start by computing the fraction of missing values in each of the 57 features in properties\_2016 (see Table \ref{table-miss}). All features have some number of missing values, and many features are missing over 99\% of their values. We found that there are primarily two types of missing values:
 \begin{enumerate}
@@ -85,6 +86,7 @@ Now we consider the features ``propertycountylandusecode'', ``propertylandusetyp
 This completes the preprocessing of properties\_2016. We refer to this preprocessed properties data set as properties\_2016\_preprocessed. The set properties\_2016\_preprocessed has 39 features.
 
 \subsection{Building the training and test sets}
+\label{section-transactions}
 
 Now we turn to the data set transactions\_2016. This data set contains the subset of properties in properties\_2016\_preprocessed that were sold in 2016. The data set contains 90275 transactions (rows) but only 90150 unique properties, suggesting that some properties were sold more than once in 2016. For each property in transactions\_2016, two features are recorded-- the transaction date and the log-error between the actual price for which the property was sold and the Zestimate. The data has no missing values. We parsed the transaction dates and kept only the month while discarding year and day. To gain some intuition, we plotted the number of transactions over month (see Figure \ref{fig-month}). Most transactions occur during the summer. There are notably fewer transactions in October, November, and December; this is in part because Kaggle reserves a subset of transactions in these months to form the test set on which our predictions are to be evaluated.
 
@@ -143,6 +145,7 @@ Rank & Feature 1 & Feature 2 & Pearson Correlation \\ \hline
 
 
 \section{Dimensionality reduction}
+\label{section-pca}
 
 We were interested to see if compressing the data to only its most important dimensions could result in a more robust regression model. For this purpose, we prepared a compressed version of the data set. We applied principal components analysis (PCA) to identify the most important dimensions in the training data, and we then projected our data onto a fraction of these dimensions. More specifically, to first identify the best compression dimension, we standardized each column of the training data x\_train\_2016 by subtracting its mean and dividing by its standard deviation. We call the standardized training data x\_train\_2016\_standard. We then plotted the fraction of variance in x\_train\_2016\_standard explained by its first $k$ principal components (Figure \ref{fig-evr}). The first 25 principal components explain95\% of variance, and the first 31 principal components explain 99\% of variance. We decided to compress the data to 25 dimensions since we thought compressing from 39 dimensions to 31 was not extreme enough. To do this, we projected x\_train\_2016\_standard onto its first 25 principal components. We call the resulting data x\_train\_2016\_pca; this data set has 25 features.
 
@@ -155,129 +158,93 @@ We were interested to see if compressing the data to only its most important dim
 To compress the test set, we first standardized x\_test\_2016\_oct using the means and standard deviations of the training set x\_train\_2016, and we then projected it onto the first 25 principal components of x\_train\_2016\_standard. We call the resulting data set x\_test\_2016\_oct\_pca. We obtained the compressed data sets x\_test\_2016\_nov\_pca and x\_test\_2016\_dec\_pca in a similar manner. We let x\_test\_2016\_pca refer to the concatenation of the three per-month compressed test sets. The compressed test set also has 25 features.
 
 
-\section{Regression methods}
+\section{Regression Models}
 
-our task is to predict the house price logerror for all properties in property data 2016 and property data 2017 given the training sets. we have to make predictions for the months of october, november, and december.
-we do this as follows--
-we augment the test sets with a "month" feature set with the value of 10 for october
-we then predict
-then we change the month value to 11 and predict
-we repeat this finally for december
+Our task is to predict log-error in Zestimates on the test sets x\_test\_2016 and x\_test\_2017 given the training sets (x\_train\_2016, y\_train\_2016) and (x\_train\_2017, y\_train\_2017). We consider two tree-based regression models-- the random forest (RF) and the gradient-boosted decision tree (GBDT) regressors. An RF is an ensemble of decision trees where a prediction is taken to be the average of individual predictions made by all decision trees. Each decision tree base learner is trained on a random fraction of features and on a random bootstrapped sample of training data; the latter sampling method is called bootstrapped aggregation or ``bagging''. These sampling procedures help to reduce correlation between the base learners. The result is an ensemble model with both reduced bias and variance.
 
-we try several models for regression
-for most of our models, we train on x_train_2016 and predict on test 2016, and then train a separate model on x_train_2017 and predict on test 2017;
-i.e., we treat 2016 and 2017 as distinct tasks
-we will see, however, that we do often transfer hyperparameters of one odel trained on 2016 to a model meant to be used on 2017
+A GBDT improves upon a vanilla decision tree through the following iterative procedure: The model starts as a decision tree fit to the training data. A second decision tree is then fit to the gradient of the loss function evaluated at the predictions of the first decision tree. The tree-estimated gradient is then used to update or ``boost'' the first decision tree through one step of gradient descent; the result is a weighted sum of two decision trees. This model can then be boosted again through additional steps of gradient descent. Each tree in the model is trained on a fraction of features and bagging is also an option.
 
-for our actual model, we focus on ensemble and gradient-boosted tree models
-in particular, random forests (RFs) and gradient-boosted decision trees or gradient-boosted machines (GBMs)
+Both RFs and GBDTs are powerful and flexible models for regression tasks. They offer a range of hyperparameters that can be tuned to find a satisfactory balance between bias and variance. Both models are ubiquitous in Kaggle competitions with GBDTs often producing winning scores. This is likely because GBDTs are simpler to train, although they are more prone to overfitting than are RFs since the constituant trees in a GBDT are correlated.
 
-tree models are power regression models but have many parameters that can be tuned to handle overfitting
-tree models have also been shown to be very effective in kaggle competitions
+We used the python API to the LightGBM library to implement both RFs and GBDTs. LightGBM is similar to the well-known XGBoost library and has been recently gaining traction in Kaggle competitions due to its speed. LightGBM allows us to adjust many model hyperparameters. The most important ones that are common to both RFs and GBDTs are n\_estimators, num\_leaves, feature\_fraction, and bagging\_fraction. In addition, for GBDTs, we also have the hyperparameters learning\_rate, lambda\_l1, and lambda\_l2, where the latter two hyperparameters control $L_1$ and $L_2$ regularization of the weights in a boosted model.
 
-an RF is an ensemble of decision tree base learners
-each base learner is trained on a random subset of features as well as on a random bootstrapped sample of the training data
-this discourages dependency between the base learners and helps to overcome overfitting
-preidction of the RF is then taken to be the average prediction of the ensemble
+We used the python module ``hyperopt'' to help us perform efficient hyperparameter optimization (HO). We created an HO pipeline by combining LightGBM, Sci-kitLearn, and hyperopt as follows: We implemented RFs and GBDTs using the Sci-KitLearn interface provided by LightGBM. We used Sci-KitLearn to implement 3-fold cross-validation (CV). We then defined a loss function that is the mean of validation scores over the three folds. The goal of HO is then to find the hyperparameter combination that minimizes the loss within a predefined set of hyperparameter combinations or ``hyperspace''.
 
-a GBM starts with an initial model
-it then improves upon the model by fitting a second model to the gradient of the objective and then adding that model to the first
-i.e., we perform gradient descent in function space
-in the case of gradient-boosted tree odels,
-we are performing gradient descent in the sapce of trees
-we end up with a weighted sum of dependent tree models
-GBMs are more prone to overfitting since the base trees are not independent
-the advantage is that they are faster to train and evaluate
+To make HO efficient, we used the Tree-Structure Parzen Estimation (TPE) algorithm. This algorithm works as follows: We first define a prior distribution over hyperspace; for our experiments, we stuck to a uniform prior. The algorithm then draws a random sample of hyperparameter combinations under the prior and evaluates the model and the 3-fold CV loss. It combines these observations with the prior through Bayes' Theorem to produce an updated posterior distribution over hyperspace. Sampling continues in this way to update the posterior iteratively. After a maximum number of iterations is reached, the most probable hyperparameter combination is returned.
 
-RFs and GBMs have several hyperparameters that can be adjusted. we were interested in performing hyperparameter optimization to find the best models
-the key hyperparameters to focus on for GBMs are--
-***
-and the key hyperparameters for RFs are--
-***
+After tuning our models, we make predictions on the test set and submit the predictions to Kaggle. Kaggle returns two test scores-- a public leaderboard (LB) and private LB. The public LB is the mean absolute error (MAE) in prediction on x\_test\_2016, and the private LB is the MAE on x\_test\_2017. We regard the private LB as the primary measurement of our success.
 
-we used the *** algorithm to do HO.
-we assume a prior distribution over hyperspace
-then we train models and evaluate some loss
-based on the losses and the prior, the algorithm computes a posterior distribution over hyperspace
-this guides the selection of the next round of models to be trained
-this procedure is iterated until either a max number of evaluations is reached or until the distribution converges to a delta over hyperparmeter combinations all having equal maximal loss
-
-we implemented our models and HO using the python API for LightGBM, sci-kit learn, and hyperopt
-lightgbm offers both rf and gbm models
-we used the sklearn interface to lightgbm
-we used the cross validation methods of sklearn to construct a loss that gives the mean absolute error in prediction over three stratified folds of the training set
-we then passed this construct into hyperopt for HO
 
 \section{Experimental results}
 
-We implemented GBM and RF models for various hyperparameter combinations and under various training conditions to obtain the best private LB. We present the results of seven such models. Table \ref{table-param} summarizes the hyperparameters used for each model. Some of the models have additional differences besides hyperparameters; therefore, we proceed to describe each model in more detail.
+We implemented GBDT and RF models for various hyperparameter combinations and under various training conditions to obtain the best private LB. We present the results of seven such models. Table \ref{table-param} summarizes the hyperparameters used for each model. Some of the models have additional differences besides hyperparameters; therefore, we proceed to describe each model in more detail.
 
 \begin{table}
 \centering
-\caption{\label{table-params} Set of hyperparameters used in each model. GBM1 is the only model that uses different hyperparameters on the 2016 and 2017 data sets.}
+\caption{\label{table-params} Set of hyperparameters used in each model. GBDT1 is the only model that uses different hyperparameters on the 2016 and 2017 data sets.}
 \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|} \hline
-\quad & n_estimators & num_leaves & feature_fraction & bagging_fraction & bagging_freq & learning_rate & lambda_l1 & lambda_l2 \\ \hline
-GBM0 & 200 & 60 & 0.5 & 1 & 0 & 0.002 & 0 & 0 \\
-GBM1 (2016) & 500 & 128 & 0.4 & 1 & 0 & 0.003 & 0 & 0 \\
-GBM1 (2017) & 173 & 128 & 0.3 & 1 & 0 & 0.01 & 0 & 0 \\
-GBM2 & 500 & 128 & 0.4 & 1 & 0 & 0.003 & 0 & 0 \\
-GBM3 & 500 & 128 & 0.4 & 1 & 0 & 0.003 & 0 & 0 \\
-GBM4 & 500 & 64 & 0.5 & 1 & 0 & 0.002 & 0 & 0 \\
-GBM5 & 500 & 64 & 0.5 & 0.8 & 10 & 0.002 & 0.001 & 0.01 \\
+\quad & n\_estimators & num\_leaves & feature\_fraction & bagging\_fraction & bagging\_freq & learning\_rate & lambda\_l1 & lambda\_l2 \\ \hline
+GBDT0 & 200 & 60 & 0.5 & 1 & 0 & 0.002 & 0 & 0 \\
+GBDT1 (2016) & 500 & 128 & 0.4 & 1 & 0 & 0.003 & 0 & 0 \\
+GBDT1 (2017) & 173 & 128 & 0.3 & 1 & 0 & 0.01 & 0 & 0 \\
+GBDT2 & 500 & 128 & 0.4 & 1 & 0 & 0.003 & 0 & 0 \\
+GBDT3 & 500 & 128 & 0.4 & 1 & 0 & 0.003 & 0 & 0 \\
+GBDT4 & 500 & 64 & 0.5 & 1 & 0 & 0.002 & 0 & 0 \\
+GBDT5 & 500 & 64 & 0.5 & 0.8 & 10 & 0.002 & 0.001 & 0.01 \\
 RF1 & 200 & 128 & 0.32 & 0.5 & 1 & 0.002 & * & * \\
 \hline
 \end{tabular}
 \end{table}
 
-GBM0 is our base model that we borrowed from \cite{rtlatimer}. It is fundamentally different from the other six models as it was trained on a data set that was preprocessed somewhat differently from than what we describe in Section \ref{section-***}. In particular, ``finishedsquarefeet15'', ``rawcensustractandblock'', and ``calculatedbathnbr'' are not dropped; ``threequarterbathnbr'', and ``regionidcity'', ``regionidcounty'' are dropped; and ``regionidzip'' was imputed with its mode. Moreover, the predictions of the model for 2016 trained on 2016 data were copied to obtain identical predictions for 2017. The public and private LBs of the model are listed in Table \ref{table-scores}.
+GBDT0 is our base model that we borrowed from \cite{rtlatimer}. It is fundamentally different from the other six models as it was trained on a data set that was preprocessed somewhat differently than what we describe in Section \ref{section-preprocess}. In particular, ``finishedsquarefeet15'', ``rawcensustractandblock'', and ``calculatedbathnbr'' are not dropped; ``threequarterbathnbr'', and ``regionidcity'', ``regionidcounty'' are dropped; and ``regionidzip'' was imputed with its mode. Moreover, a single model was trained on 2016 data, and the predictions made on 2016 test data by the model were simply copied to obtain predictions on the 2017 test data. GBDT0 was originally implemented only to test our code, but we present it here due to its strong performance. The public and private LBs of the model are listed in Table \ref{table-scores}.
 
-GBM1 is the first model that we trained on the preprocessed data as described in Section \ref{section-***}. We first performed hyperparameter optimization for two GBM models separately on the 2016 and 2017 training sets using the *** algorithm and 3-fold CV. Table \ref{table-ho} lists the hyperparameter grids that were used. We used the GBM optimized for 2016 to predict for 2016 and similarly for 2017. Table \ref{table-scores} lists the CV score of both models as well as the public and private LBs. The private LB is significantly worse than that of GBM0.
+GBDT1 is the first model that we trained on (x\_train\_2016, y\_train\_2016) and (x\_train\_2017, y\_train\_2017) data as defined in Section \ref{section-transactions}. We implemented two separate models on 2016 and 2017 data. We performed HO for both models using the TPE algorithm and the mean 3-fold CV score as the loss. Table \ref{table-ho} lists the hyperparameter grids that were used for both the 2016 and 2017 models. We also indirectly optimized n\_estimators-- the hyperparameter that determines the number of boosts; we set n\_estimators to 500 but also implemented early stopping: At each boosting iteration of a GBDT as it is being trained on 2 of the 3 folds of the training data set, a validation score is calculated on the third fold. If this validation score does not improve in 5 consecutive boosting iterations, then boosting is terminated. The number of boosts that resulted in the best validation score up to that point is then recorded. The best number of boosts averaged over all three folds is taken to be the optimized value of the hyperparameter n\_estimators. We used the 2016 model to make predictions on x\_test\_2016 and the 2017 model to make predictions on x\_test\_2017; thus, we treated the 2016 and 2017 tasks as completely independent. Table \ref{table-scores} lists the CV score of both models as well as the public and private LBs. The private LB is significantly worse than that of GBDT0.
 
-GBM2 improves upon GBM1 by using the model with hyperparameters otpimized on 2016 training data to predict for both 2016 and 2017. To be clear, the 2016 predictions were not simply copied for 2017; rather, the model was to make separate predictions on the 2016 and 2017 test sets.
+GBDT2 improves upon GBDT1 by using the hyperparameters optimized on (x\_train\_2016, y\_train\_2016) for both the 2016 model and 2017 model; i.e., we transfer the hyperparameters of the 2016 model to the 2017 model. Then as before, we train the two models separately on 2016 and 2017 training data and use each model to make predictions on the test data of its respective year.
 
-GBM3 is identical to GBM2 but is applied to data that was compressed with PCA (see Section \ref{section-pca}). PCA led to a poorer private LB.
+GBDT3 is identical to GBDT2 but is applied to the PCA-compressed data (see Section \ref{section-pca}). PCA led to a poorer private LB.
 
-GBM4 improves upon GBM2 by replacing the optimized hyperparameters with hand-picked ones. The hand-picked hyperparameters were selected to be close to the ones used in GBM0. As in GBM2, the same set of hyperparameters was used for both the 2016 and 2017 models.
+GBDT4 improves upon GBDT2 by replacing the optimized hyperparameters with hand-picked ones. The hand-picked hyperparameters were selected to be close to the ones used in GBDT0. As in GBDT2, the same hyperparameters were used for both the 2016 and 2017 models.
 
-GBM5 improves upon GBM4 via reducing overfitting by bagging and $L_1$ and $L_2$ regularization. We took GBM4 and performed hyperparameter optimization on 2016 training data over bagging fraction, and the strengths of $L_1$ and $L_2$ regularization (see Table \ref{table-ho}). The *** algorithm and 3-fold CV were used. The optimized hyperparameters were then used for both the 2016 and 2017 models. The mean CV score is reported along with the public and private LBs (see Table \ref{table-scores}).
+GBDT5 improves upon GBDT4 through bagging and $L_1$ and $L_2$ regularization; these adjustments help to combat overfitting. More specifically, we took GBDT4 and performed HO on (x\_train\_2016, y\_train\_2016) with respect to the three hyperparameters that control bagging and regularization (see Table \ref{table-ho}). We used the optimized hyperparameters for both the 2016 model and 2017 model.
+
+RF1 is an RF with hyperparameters optimized on 2016 training data (see Table \ref{table-ho}). The same hyperparameters were used for both 2016 and 2017 models. The mean CV score is reported along with the LBs (see Table \ref{table-score}). Out of all models trained on data preprocessed as described in Section \ref{section-preprocessed} (i.e., all models except GBDT0), RF1 achieves the best private LB. It is worth noting, however, that the improved score of RF1 comes at a significant cost in computation time; during HO for GBDT1 and GBDT5, each evaluation (for each hyperparameter combination) took about 5-7 seconds to run. In contrast, each evaluation during HO of RF1 took over 7 hours.
 
 \begin{table}
 \centering
-\caption{\label{table-ho} Hyperparameter grid that was searched during of hyperparameter optimization of each model.}
+\caption{\label{table-ho} hyperspaces that were searched during HO of each model.}
 \begin{tabular}{|c|c|c|} \hline
-Model & Parameters & Grid \\ \hline
-GBM1 & num_leaves, feature_fraction, learning_rate & $[32, 64, 128] \times [0.3, 0.4, 0.5, 0.6, 0.7] \times [0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009000000000000001, 0.01]$ \\
-GBM5 & bagging_fraction, lambda_l1, lambda_l2 & $[0.2, 0.4, 0.6, 0.8, 1] \times [0, 0.001, 0.01] \times [0, 0.001, 0.01]$ \\
-RF1 & n_estimators, num_leaves, feature_fraction, bagging_fraction & $[50, 100, 150, 200] \times [32, 64, 128] \times [0.8, 0.16, 0.32, 0.64] \times [0.2, 0.3, 0.4, 0.5]$ \\
+Model & Hyperparameters & Grid \\ \hline
+GBDT1 & num\_leaves, feature\_fraction, learning\_rate & $[32, 64, 128] \times [0.3, 0.4, 0.5, 0.6, 0.7] \times [0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01]$ \\
+GBDT5 & bagging\_fraction, lambda\_l1, lambda\_l2 & $[0.2, 0.4, 0.6, 0.8, 1] \times [0, 0.001, 0.01] \times [0, 0.001, 0.01]$ \\
+RF1 & n\_estimators, num\_leaves, feature\_fraction, bagging\_fraction & $[50, 100, 150, 200] \times [32, 64, 128] \times [0.8, 0.16, 0.32, 0.64] \times [0.2, 0.3, 0.4, 0.5]$ \\
 \hline
 \end{tabular}
 \end{table}
 
-Finally, RF2 is an RF with hyperparameters optimized on 2016 training data (see Table \ref{table-ho}). The same optimized hyperparameters were used in both 2016 and 2017 models. The CV score is reported along with the LBs (see Table \ref{table-score}). Out of all models trained on data preprocessed as described in Section \ref{section-***} (i.e., all models except GBM0), RF2 achieves the best private LB. It is worth noting, however, that the improved score by RF2 comes at a significant cost in computation time; during hyperparameter optimization for GBM1 and GBM5, each evaluation (for each hyperparameter combination) took about 5-7 seconds to run, but in contrast, each evaluation while optimizing RF2 took over 7 hours.
-
 \begin{table}
 \centering
-\caption{\label{table-scores} CV, public LB, and private LB scores for each model. The CV score is the mean of the validation over three folds. Since the hyperparameters of GBM1 were optimized separately for 2016 and 2017, then two CV scores are reported-- one for each year.}
-\begin{tabular}{|c|c|c|} \hline
+\caption{\label{table-scores} Mean CV, public LB, and private LB scores for each model. CV score is the mean of the validation over three folds. Since the hyperparameters of GBDT1 were optimized separately for 2016 and 2017, then two CV scores are reported-- one for each year.}
+\begin{tabular}{|c|c|c|c|} \hline
 Model & CV & Public LB & Private LB \\ \hline
-GBM0 & \quad & 0.0651179 & 0.0759204 \\
-GBM1 & \begin{tabular}{@{}c@{}} 0.0679511\\ 0.0703069\end{tabular} & 0.0647788 & 0.0763565 \\
-GBM2 & \quad & 0.0647788 & 0.0762839 \\
-GBM3 & \quad & 0.0648313 & 0.0763703 \\
-GBM4 & \quad & 0.0647504 & 0.0761217 \\
-GBM5 & 0.0679622 & 0.0647539 & 0.0761002 \\
+GBDT0 & \quad & 0.0651179 & 0.0759204 \\
+GBDT1 & \begin{tabular}{@{}c@{}} 0.0679511\\ 0.0703069\end{tabular} & 0.0647788 & 0.0763565 \\
+GBDT2 & \quad & 0.0647788 & 0.0762839 \\
+GBDT3 & \quad & 0.0648313 & 0.0763703 \\
+GBDT4 & \quad & 0.0647504 & 0.0761217 \\
+GBDT5 & 0.0679622 & 0.0647539 & 0.0761002 \\
 RF1 & 0.0680366 & 0.0647544 & 0.0760869 \\
 \hline
 \end{tabular}
 \end{table}
 
-***
+Both GBDT and RF models provide a natural measure of the ``importance'' of a feature. At each node of a decision tree, a feature and threshold are selected such that splitting the data with respect to the selected feature and threshold produces a maximal gain in ``purity''-- some measure of the homogenity of the target in each child subset. Features that are responsible for many splits and high gains in GBDT and RF models are then taken to be more important. Table \ref{table-importance} ranks the property features according to both the GBDT5 and RF1 models. The most important features according to both models appear to be the ones pertaining to taxes, overall area, and location. Some features have 0 importance, meaning that dropping them from the data would have no impact on performance; these features appear to be the ones that were highly imbalanced but that we imputed anyways.
 
 \begin{table}
 \centering
-\caption{\label{table-importances} Importance of each feature as determined by the GBM5 and RF1 models, where importance of a feature is calculated as the sum of decreases in loss over all splits of the feature in the GBM or RF model. Features are sorted with descending importance.}
+\caption{\label{table-importances} Importance of each feature as determined by the GBDT5 and RF1 models, where importance of a feature is calculated as the sum of decreases in loss over all splits of the feature in the GBDT or RF model. Features are sorted in order of descending importance.}
 \begin{tabular}{|c|c|c|c|c|} \hline
-Rank & Feature (GBM5) & Importance (GBM5) & Feature (RF1) & Importance (RF1) \\ \hline
+Rank & Feature (GBDT5) & Importance (GBDT5) & Feature (RF1) & Importance (RF1) \\ \hline
 1 & taxpercentage & 1628.243 & taxpercentage & 426.52 \\
 2 & yearbuilt & 699.807 & calculatedfinishedsquarefeet & 219.81 \\
 3 & calculatedfinishedsquarefeet & 685.086 & finishedsquarefeet50 & 210.467 \\

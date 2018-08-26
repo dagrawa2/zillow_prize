@@ -11,7 +11,7 @@ for year in [2016, 2017]:
 	et.corrs(year, absolute=True, out=out)
 
 	et.plot_fraction_missing(year, n_features=10, out=out)
-	et.plot_evr(year, max_k=10, out=out)
+	et.plot_evr(year, threshold=0.95, out=out)
 	et.plot_cross_sections(year, absolute=False, out=out)
 	et.plot_cross_sections(year, absolute=True, out=out)
 	et.plot_corrs(year, out=out)
