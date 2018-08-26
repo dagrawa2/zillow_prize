@@ -1,6 +1,7 @@
 \documentclass[12pt]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{amsmath, graphicx}
+\usepackage{hyperref}
 
 \title{Predicting the error in Zillow Zestimates}
 \author{Devanshu Agrawal}
@@ -93,11 +94,11 @@ Now we turn to the data set transactions\_2016. This data set contains the subse
 \caption{\label{fig-month} Number of transactions in each month of 2016 as provided in the training set. Transactions are fewer in October, November, and December since a fraction of these are reserved for the test set.}
 \end{figure}
 
-We formed the training set for our regression models as follows: We took the subset of properties from properties\_2016_preprocessed that were also listed in transactions\_2016; thus, we have 90275 not necessarily unique properties each with 38 features. We then augmented this data set with a new feature-- month, which we obtained from transactions\_2016. We observed that all properties in this set have an ``assessmentyear'' of 2015; the feature ``assessmentyear'' therefore provides no useful information for training, and hence we dropped this feature. We refer to the resulting data set as x\_train\_2016, which has 90275 not necessarily unique properties and 39 features. We then take the properties in transactions\_2016 with the log-error feature to form y\_train\_2016. The data (x\_train\_2016, y\_train\_2016) is then our training set for predicting log-error for each property in 2016.
+We formed the training set for our regression models as follows: We took the subset of properties from properties\_2016\_preprocessed that were also listed in transactions\_2016; thus, we have 90275 not necessarily unique properties each with 38 features. We then augmented this data set with a new feature-- month, which we obtained from transactions\_2016. We observed that all properties in this set have an ``assessmentyear'' of 2015; the feature ``assessmentyear'' therefore provides no useful information for training, and hence we dropped this feature. We refer to the resulting data set as x\_train\_2016, which has 90275 not necessarily unique properties and 39 features. We then take the properties in transactions\_2016 with the log-error feature to form y\_train\_2016. The data (x\_train\_2016, y\_train\_2016) is then our training set for predicting log-error for each property in 2016.
 
-The challenge is to predict log-error for all properties in properties\_2016\_preprocessed. We therefore build the test set as follows: We first take properties\_2016\_preprocessed and augment it with a ``month'' feature whose value is set to 10 (as in October); we call this augmented set x_\test\_2016\_oct. We construct x\_test\_2016\_nov and x\_test\_2016\_dec by setting the ``month'' feature to 11 and 12 respectively. Then to make predictions for October 2016, we apply our trained model on x_\test\_oct; we do similar for November and December. We let x\_test\_2016 be shorthand for the concatenated set (x\_test\_2016\_oct, x_\test\_2016\_nov, x_\test\_2016\_dec).
+The challenge is to predict log-error for all properties in properties\_2016\_preprocessed. We therefore build the test set as follows: We first take properties\_2016\_preprocessed and augment it with a ``month'' feature whose value is set to 10 (as in October); we call this augmented set x\_test\_2016\_oct. We construct x\_test\_2016\_nov and x\_test\_2016\_dec by setting the ``month'' feature to 11 and 12 respectively. Then to make predictions for October 2016, we apply our trained model on x\_test\_oct; we do similar for November and December. We let x\_test\_2016 be shorthand for the concatenated set (x\_test\_2016\_oct, x\_test\_2016\_nov, x\_test\_2016\_dec).
 
-We build the training set (x_\train\_2017, y\_train\_2017) and test set x\_test\_2017 for 2017 in exactly the same way as we did for 2016.
+We build the training set (x\_train\_2017, y\_train\_2017) and test set x\_test\_2017 for 2017 in exactly the same way as we did for 2016.
 
 \subsection{Correlations}
 
@@ -301,7 +302,7 @@ Rank & Feature (GBM5) & Importance (GBM5) & Feature (RF1) & Importance (RF1) \\ 
 
 ***
 
-\bibliographystyle{ACM-Reference-Format}
+\bibliographystyle{plain}
 \bibliography{references}
 
 \end{document}
